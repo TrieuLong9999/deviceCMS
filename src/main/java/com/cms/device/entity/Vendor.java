@@ -9,6 +9,7 @@ public class Vendor {
     @Id
     private String id;
     private String name;
+    private String shortName;
     private String countryCode;
     private String contact;
 
@@ -46,5 +47,13 @@ public class Vendor {
 
     public void setContact(String contact) {
         this.contact = contact;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public void setShortName(String shortName) {
+        this.shortName = shortName;
     }
 }
