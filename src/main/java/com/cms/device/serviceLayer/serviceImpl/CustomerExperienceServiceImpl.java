@@ -18,4 +18,9 @@ public class CustomerExperienceServiceImpl implements CustomerExperienceService 
         Optional<CustomerExperience> data = customerExperienceRepository.findById(id);
         return data.get();
     }
+
+    @Override
+    public void save(CustomerExperience customerExperience) {
+        if (customerExperience != null) customerExperienceRepository.save(customerExperience);
+    }
 }
