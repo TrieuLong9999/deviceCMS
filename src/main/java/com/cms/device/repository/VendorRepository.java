@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface VendorRepository extends MongoRepository<Vendor, String> {
     Vendor findByName(String name);
+    Vendor findByShortName(String shortName);
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("api/fake")
@@ -29,6 +30,8 @@ public class FakeDataController {
     private CustomerExperienceService customerExperienceService;
     @Autowired
     private ApiStatusLogService apiStatusLogService;
+    @Autowired
+    private DeviceService deviceService;
     @GetMapping("all")
     public ResponseEntity<ResponseObject> fakeALLData(){
         //TODO fake vendor
@@ -37,7 +40,7 @@ public class FakeDataController {
         vendorInit  =  initVendor();
 
         for(Vendor vendor: vendorInit){
-            if(vendorService.getByName(vendor.getShortName()) != null) continue;
+            if(vendorService.findByShortName(vendor.getShortName()) != null) continue;
             vendorService.save(vendor);
         }
         vendorInit.clear();
@@ -73,7 +76,7 @@ public class FakeDataController {
 
         if(allUserId.isEmpty()) return;
         Random random = new Random();
-        String[] platforms = {"web", "app", "tv"};
+        String[] platforms = {"web", "app_desktop", "tv", "android_app", "ios_app"};
         String[] versions = {"1.0", "1.1", "2.0", "2.1", "3.0"};
         String[] messages = {
                 "Great experience!", "Needs improvement.", "Love the app!",
@@ -104,6 +107,9 @@ public class FakeDataController {
         mapVendor.put("Hikvision", "Hikvision");
         mapVendor.put("Axis", "Axis Communications");
         mapVendor.put("Dahua", "Dahua Communications");
+        mapVendor.put("Rang dong", "Rang Dong Communications");
+        mapVendor.put("Imou", "Imou Communications");
+        mapVendor.put("Xiaomi", "Xiaomi Communications");
 
         for (String key: mapVendor.keySet()){
             Vendor vendor = new Vendor();
@@ -122,7 +128,7 @@ public class FakeDataController {
         List<User> userInit = new ArrayList<>();
         Random random = new Random();
 
-        for (int i = 0 ; i < 100; i++){
+        for (int i = 0 ; i < 1000; i++){
             User tempUser = new User();
             tempUser.setId(StringUtil.generateUUID());
             tempUser.setName("User"+i+1);
@@ -141,7 +147,7 @@ public class FakeDataController {
 
         if(allUserId.isEmpty()) return;
         Random random = new Random();
-        String[] platforms = {"web", "app", "tv"};
+        String[] platforms = {"web", "app_desktop", "tv", "android_app", "ios_app"};
         String[] versions = {"1.0", "1.1", "2.0", "2.1", "3.0"};
         String[] messages = {
                 "Great experience!", "Needs improvement.", "Love the app!",
@@ -193,6 +199,39 @@ public class FakeDataController {
             log.setStatusCode(statusCodes[random.nextInt(statusCodes.length)]);
             log.setDurationTime((long) random.nextInt(10_001));
             apiStatusLogService.save(log);
+        }
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("device")
+    public ResponseEntity<ResponseObject> fakeDevice(){
+        ResponseObject responseObject = new ResponseObject();
+        responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
+        Random random = new Random();
+        List<Vendor> allVendor = vendorService.getAll();
+
+        List<String> allVendorId = allVendor.stream().map(Vendor::getId).toList();
+        // Lấy tất cả các loại thiết bị
+        Device.DeviceType[] deviceTypes = Device.DeviceType.values();
+
+
+
+        for(int i = 0; i< 1000; i++){
+            Device device = new Device();
+            device.setId(StringUtil.generateUUID());
+            // Tạo tên và model ngẫu nhiên
+            device.setName("Device " + (i + 1));
+            device.setModel("Model " + (i + 1));
+            // Tạo serialNumber ngẫu nhiên
+            device.setSerialNumber("SN-" + (random.nextInt(1000000) + 100000));
+            // Chọn ngẫu nhiên vendorId từ danh sách vendor
+            device.setVendorId(allVendorId.get(random.nextInt(allVendorId.size() - 1)));
+            // Chọn ngẫu nhiên loại thiết bị từ DeviceType
+            device.setType(deviceTypes[random.nextInt(deviceTypes.length)].ordinal() + 1);
+            // Cập nhật ngày tạo và ngày sửa đổi ngẫu nhiên
+            device.setCreateDate(new Date());
+            device.setLastModified(new Date());
+            deviceService.save(device);
         }
         return ResponseEntity.ok(responseObject);
     }

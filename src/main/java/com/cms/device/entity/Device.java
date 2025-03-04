@@ -21,7 +21,13 @@ public class Device {
         SMART_CAMERA(1),
         SMART_LIGHT(2),
         SMART_DOOR(3),
-        CAMERA_WIFI(4);
+        CAMERA_WIFI(4),
+        SMART_TV(5),
+        SMART_THERMOSTAT(6),      // Điều hòa thông minh
+        SMART_PLUG(7),            // Phích cắm thông minh
+        SMART_SPEAKER(8),         // Loa thông minh
+        SMART_LOCK(9),            // Khóa thông minh
+        SMART_FRIDGE(10);         // Tủ lạnh thông minh
         private final int code;  // Mã số (code)
 
         DeviceType(int code) {

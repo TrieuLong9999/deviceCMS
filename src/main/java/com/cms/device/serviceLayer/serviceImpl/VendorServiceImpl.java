@@ -28,4 +28,9 @@ public class VendorServiceImpl implements VendorService {
     public Vendor getByName(String name) {
         return vendorRepository.findByName(name);
     }
+
+    @Override
+    public Vendor findByShortName(String shortName) {
+        return vendorRepository.findByShortName(shortName);
+    }
 }

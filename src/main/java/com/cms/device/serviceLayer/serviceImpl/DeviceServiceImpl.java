@@ -6,6 +6,9 @@ import com.cms.device.serviceLayer.service.DeviceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Map;
+
 @Service
 public class DeviceServiceImpl implements DeviceService {
     @Autowired
@@ -15,5 +18,10 @@ public class DeviceServiceImpl implements DeviceService {
     public void save(Device device) {
         if(device != null)
         deviceRepository.save(device);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDeviceStatsByVendor() {
+        return deviceRepository.getDeviceStatsByVendor();
     }
 }
