@@ -32,6 +32,7 @@ public class EntityStructureService {
         entitiesStructure.put(Feedback.class.getSimpleName(),getEntityFields(Feedback.class));
         entitiesStructure.put(User.class.getSimpleName(),getEntityFields(User.class));
         entitiesStructure.put(Vendor.class.getSimpleName(),getEntityFields(Vendor.class));
+        entitiesStructure.put(ApiStatusLog.class.getSimpleName(), getEntityFields(ApiStatusLog.class));
 
         return entitiesStructure;
     }
