@@ -11,4 +11,9 @@ public interface FeedbackService {
     void save(Feedback feedback);
     Page<Feedback> findAll(Pageable pageable);
     List<Map<String, Object>> getRatingStats();
+    Page<Feedback> findAllByOrderByCreateAtDesc(Pageable pageable);
+    List<Map<String, Object>> findFeedbackWithUser(Pageable pageable);
+    Long countTotalFeedback();
+
+    List<Map<String, Object>> getRatingStatistics();
 }

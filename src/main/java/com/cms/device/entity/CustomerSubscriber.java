@@ -9,7 +9,7 @@ import java.util.Date;
 public class CustomerSubscriber {
     @Id
     private String id;
-    private String name;
+//    private String name;
     private String userId;
     private String  service; // record, cloud,....
     private Long price;
@@ -29,13 +29,13 @@ public class CustomerSubscriber {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+//    public String getName() {
+//        return name;
+//    }
+//
+//    public void setName(String name) {
+//        this.name = name;
+//    }
 
     public String getUserId() {
         return userId;

@@ -11,6 +11,7 @@ public class User {
     private String id;
     private String name;
     private String phone;
+    private Integer type;
     private Date createDate;
     private Date lastModified;
 
@@ -55,5 +56,37 @@ public class User {
 
     public void setLastModified(Date lastModified) {
         this.lastModified = lastModified;
+    }
+
+    public Integer getType() {
+        return type;
+    }
+
+    public void setType(Integer type) {
+        this.type = type;
+    }
+    public enum UserType{
+        PRE_PAY(1),
+        PAY_LATER(2);
+        private final int code;  // Mã số (code)
+
+        UserType(int code) {
+            this.code = code;
+        }
+        public int getCode() {
+            return code;
+        }
+        public String getName() {
+            return name();  // Trả về tên enum (chẳng hạn: "EVENT_FACE")
+        }
+        // Tìm kiếm EventType từ code
+        public static UserType fromCode(int code) {
+            for (User.UserType deviceType : User.UserType.values()) {
+                if (deviceType.getCode() == code) {
+                    return deviceType;
+                }
+            }
+            return null;
+        }
     }
 }

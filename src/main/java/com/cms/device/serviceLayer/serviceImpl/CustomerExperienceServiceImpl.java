@@ -35,4 +35,9 @@ public class CustomerExperienceServiceImpl implements CustomerExperienceService 
     public List<Map<String, Object>> countUsersByPlatform() {
         return customerExperienceRepository.countUsersByPlatform();
     }
+
+    @Override
+    public List<Map<String, Object>> countUsersByPlatformWithYearlyMonthlyData() {
+        return customerExperienceRepository.countUsersByPlatformWithYearlyMonthlyData();
+    }
 }

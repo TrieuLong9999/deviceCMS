@@ -11,4 +11,6 @@ public interface CustomerExperienceService {
     void save(CustomerExperience customerExperience);
     CustomerExperience findByUserIdAndPlatform(String userId, String platform);
     List<Map<String, Object>>  countUsersByPlatform();
+    List<Map<String, Object>> countUsersByPlatformWithYearlyMonthlyData();
+
 }

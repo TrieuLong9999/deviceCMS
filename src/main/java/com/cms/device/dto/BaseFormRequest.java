@@ -50,10 +50,15 @@ public class BaseFormRequest {
     // Chuyển đổi BasePageableForm thành Pageable để sử dụng trong truy vấn
     public Pageable toPageable() {
         if (StringUtil.isEmpty(sortBy) || StringUtil.isEmpty(sortOder)) {
-            return PageRequest.of(page, pageSize);
+            return PageRequest.of(page -1, pageSize);
         }else {
-            return PageRequest.of(page, pageSize,
+            return PageRequest.of(page -1, pageSize,
                     "desc".equalsIgnoreCase(sortOder) ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
         }
+    }
+    public boolean validate(){
+        if(this.page < 1) return true;
+        if(this.pageSize < 1) return true;
+        return false;
     }
 }

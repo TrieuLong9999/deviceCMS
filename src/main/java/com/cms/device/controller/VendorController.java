@@ -1,19 +1,20 @@
 package com.cms.device.controller;
 
+import com.cms.device.dto.BaseFormRequest;
 import com.cms.device.dto.response.ResponseListObject;
 import com.cms.device.dto.response.ResponseObject;
+import com.cms.device.entity.Device;
 import com.cms.device.entity.Vendor;
 import com.cms.device.serviceLayer.service.DeviceService;
 import com.cms.device.serviceLayer.service.VendorService;
 import com.cms.device.util.StaticCode;
 import com.cms.device.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -76,5 +77,65 @@ public class VendorController {
         }
         responseObject.setData(dataResponse);
         return ResponseEntity.ok(responseObject);
+    }
+    @GetMapping("/type-distribution-device")
+    public ResponseEntity<ResponseObject> typeDeviceDistribution(){
+        ResponseObject responseObject = new ResponseObject();
+        responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
+
+        List<Vendor> vendorList = vendorService.getAll();
+        List<String> vendorIds = vendorList.stream().map(Vendor::getId).toList();
+//        System.out.println(vendorIds);
+        List<Map<String, Object>> datas = deviceService.getDeviceTypeDistributionByVendors(vendorIds);
+
+        List<Map<String, Object>> dataResponse = new ArrayList<>();
+
+        for(Map<String, Object> tempData: datas){
+            if(tempData.get("_id") != null){
+                try{
+                    Integer type = Integer.parseInt(tempData.get("_id").toString());
+                    String nameType = Device.DeviceType.fromCode(type).getName();
+                    if(!StringUtil.isEmpty(nameType)){
+                        tempData.put("nameType", nameType);
+                        dataResponse.add(tempData);
+                    }
+                }catch (Exception e) {
+
+                }
+            }
+
+        }
+        responseObject.setData(dataResponse);
+        return ResponseEntity.ok(responseObject);
+
+    }
+    @GetMapping("/new-devices-days")
+    public ResponseEntity<ResponseObject> newDeviceByDay(@RequestParam("day") int day){
+        ResponseObject responseObject = new ResponseObject();
+        responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, - day); // Lấy ngày 7 ngày trước
+        Date fromDate = calendar.getTime();
+
+        responseObject.setData(deviceService.getNewDevicesDays(fromDate));
+        return ResponseEntity.ok(responseObject);
+    }
+
+    @PostMapping("vendor-and-device")
+    public ResponseEntity<ResponseListObject> vendorAndDevice(@RequestBody BaseFormRequest formRequest){
+        ResponseListObject responseListObject = new ResponseListObject();
+
+        responseListObject.setCodeResponse(StaticCode.CodeResponse.Success);
+        if(formRequest.validate()) return  ResponseEntity.ok(responseListObject);
+        List<Map<String, Object>> data = deviceService.getVendorDeviceStats(formRequest.toPageable());
+
+        responseListObject.setData(data);
+        responseListObject.setPage((long)formRequest.getPage());
+        responseListObject.setPageSize((long)formRequest.getPageSize());
+
+        responseListObject.setTotal(deviceService.getTotalVendorDeviceStats());
+
+        return ResponseEntity.ok(responseListObject);
     }
 }

@@ -30,4 +30,26 @@ public class FeedbackServiceImpl implements FeedbackService {
     public List<Map<String, Object>> getRatingStats() {
         return feedbackRepository.getAverageRatingByPlatform();
     }
+
+    @Override
+    public Page<Feedback> findAllByOrderByCreateAtDesc(Pageable pageable) {
+        return feedbackRepository.findAllByOrderByCreateAtDesc(pageable);
+    }
+
+    @Override
+    public List<Map<String, Object>> findFeedbackWithUser(Pageable pageable) {
+        return feedbackRepository.findFeedbackWithUser(pageable);
+    }
+
+    @Override
+    public Long countTotalFeedback() {
+        return feedbackRepository.countTotalFeedback();
+    }
+
+    @Override
+    public List<Map<String, Object>> getRatingStatistics() {
+        return feedbackRepository.getRatingStatistics();
+    }
+
+
 }

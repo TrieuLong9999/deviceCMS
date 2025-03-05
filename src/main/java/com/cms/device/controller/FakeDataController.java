@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
@@ -32,6 +33,8 @@ public class FakeDataController {
     private ApiStatusLogService apiStatusLogService;
     @Autowired
     private DeviceService deviceService;
+    @Autowired
+    private CustomerSubscriberService customerSubscriberService;
     @GetMapping("all")
     public ResponseEntity<ResponseObject> fakeALLData(){
         //TODO fake vendor
@@ -49,8 +52,8 @@ public class FakeDataController {
             if(userService.findByPhone(user.getPhone()) != null) continue;
             userService.save(user);
         }
-
         userInit.clear();
+
         responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
         return ResponseEntity.ok(responseObject);
     }
@@ -127,8 +130,10 @@ public class FakeDataController {
         // init user
         List<User> userInit = new ArrayList<>();
         Random random = new Random();
+        // Lấy tất cả các loại thiết bị
+        User.UserType[] userTypes = User.UserType.values();
 
-        for (int i = 0 ; i < 1000; i++){
+        for (int i = 0 ; i < 10000; i++){
             User tempUser = new User();
             tempUser.setId(StringUtil.generateUUID());
             tempUser.setName("User"+i+1);
@@ -136,6 +141,7 @@ public class FakeDataController {
             Date createDate = new Date(System.currentTimeMillis() - random.nextInt(1000000000)); // Ngày tạo ngẫu nhiên
             tempUser.setCreateDate(createDate);
             tempUser.setLastModified(new Date(createDate.getTime() + random.nextInt(1000000000)));
+            tempUser.setType(userTypes[random.nextInt(userTypes.length)].ordinal() + 1);
             userInit.add(tempUser);
         }
         return userInit;
@@ -154,7 +160,7 @@ public class FakeDataController {
                 "It crashes sometimes.", "User-friendly interface.", "Great performance."
         };
 
-        for (int i = 0 ; i < 1000; i++){
+        for (int i = 0 ; i < 10000; i++){
             Feedback tempFeedback = new Feedback();
             tempFeedback.setId(StringUtil.generateUUID());
             tempFeedback.setUserId(allUserId.get(random.nextInt(allUserId.size()-1)));
@@ -229,11 +235,171 @@ public class FakeDataController {
             // Chọn ngẫu nhiên loại thiết bị từ DeviceType
             device.setType(deviceTypes[random.nextInt(deviceTypes.length)].ordinal() + 1);
             // Cập nhật ngày tạo và ngày sửa đổi ngẫu nhiên
-            device.setCreateDate(new Date());
-            device.setLastModified(new Date());
+            Date createAt = new Date(System.currentTimeMillis() - random.nextInt(1000000000)); // Ngày tạo ngẫu nhiên
+            device.setCreateDate(createAt);
+            device.setLastModified(new Date(createAt.getTime() + random.nextInt(1000000000)));
             deviceService.save(device);
         }
         return ResponseEntity.ok(responseObject);
+    }
+
+    @GetMapping("service")
+    public ResponseEntity<ResponseObject> fakeService(){
+        ResponseObject responseObject = new ResponseObject();
+        responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
+        Random random = new Random();
+
+
+        List<User> allUser = userService.findAll();
+
+        List<String> allUserId = allUser.stream().map(User::getId).toList();
+        List<String> SERVICES = Arrays.asList("record", "cloud");
+        Map<String, Long> PRICE_MAP = Map.of(
+                "record", 50000L,
+                "cloud", 100000L
+        );
+        List<Long> DURATION_OPTIONS = Arrays.asList(1L, 3L, 7L);
+        for (Integer i = 0 ; i < 1000; i++){
+            CustomerSubscriber customerSubscriber = new CustomerSubscriber();
+            customerSubscriber.setId(StringUtil.generateUUID());
+            customerSubscriber.setUserId(allUserId.get(random.nextInt(allUserId.size() - 1)));
+
+            // Chọn service ngẫu nhiên
+            String selectedService = SERVICES.get(random.nextInt(SERVICES.size()));
+            customerSubscriber.setService(selectedService);
+
+            // Chọn thời gian sử dụng từ danh sách (1, 3, 7 ngày)
+            customerSubscriber.setDuration(DURATION_OPTIONS.get(random.nextInt(DURATION_OPTIONS.size())));
+
+            customerSubscriber.setPrice(customerSubscriber.getDuration()*(PRICE_MAP.get(selectedService)));
+
+            // Gán ngày tạo ngẫu nhiên trong vòng 3 tháng gần đây
+            long millisInThreeMonths = 90L * 24 * 60 * 60 * 1000;
+            Date createDate = new Date(System.currentTimeMillis() - random.nextLong(millisInThreeMonths));
+            customerSubscriber.setCreateDate(createDate);
+            customerSubscriber.setLastModified(new Date());
+
+            customerSubscriberService.save(customerSubscriber);
+        }
+        return ResponseEntity.ok(responseObject);
+
+    }
+    @GetMapping("all-in-one")
+    public ResponseEntity<ResponseObject> allInOne(){
+        ResponseObject responseObject = new ResponseObject();
+        List<Vendor> vendorInit = new ArrayList<>();
+        vendorInit  =  initVendor();
+
+        for(Vendor vendor: vendorInit){
+            if(vendorService.findByShortName(vendor.getShortName()) != null) continue;
+            vendorService.save(vendor);
+        }
+        vendorInit.clear();
+        List<User> userInit = initUser();
+        for (User user: userInit){
+            if(userService.findByPhone(user.getPhone()) != null) continue;
+            userService.save(user);
+        }
+        userInit.clear();
+        // init feedbackUser
+
+        initFeedback();
+
+        //TODO init api status log
+        initApiStatusLog();
+
+        //TODO init device
+
+        initDevice();
+
+        //TODO
+        initService();
+
+        initCustomerExp();
+
+        responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
+        return ResponseEntity.ok(responseObject);
+
+
+
+    }
+    private void initService(){
+        Random random = new Random();
+
+        List<User> allUser = userService.findAll();
+
+        List<String> allUserId = allUser.stream().map(User::getId).toList();
+        List<String> SERVICES = Arrays.asList("record", "cloud");
+        Map<String, Long> PRICE_MAP = Map.of(
+                "record", 50000L,
+                "cloud", 100000L
+        );
+        List<Long> DURATION_OPTIONS = Arrays.asList(1L, 3L, 7L);
+        for (Integer i = 0 ; i < 1000; i++){
+            CustomerSubscriber customerSubscriber = new CustomerSubscriber();
+            customerSubscriber.setId(StringUtil.generateUUID());
+            customerSubscriber.setUserId(allUserId.get(random.nextInt(allUserId.size() - 1)));
+
+            // Chọn service ngẫu nhiên
+            String selectedService = SERVICES.get(random.nextInt(SERVICES.size()));
+            customerSubscriber.setService(selectedService);
+
+            // Chọn thời gian sử dụng từ danh sách (1, 3, 7 ngày)
+            customerSubscriber.setDuration(DURATION_OPTIONS.get(random.nextInt(DURATION_OPTIONS.size())));
+            customerSubscriber.setPrice(customerSubscriber.getDuration()*(PRICE_MAP.get(selectedService)));
+
+            // Gán ngày tạo ngẫu nhiên trong vòng 3 tháng gần đây
+            long millisInThreeMonths = 90L * 24 * 60 * 60 * 1000;
+            Date createDate = new Date(System.currentTimeMillis() - random.nextLong(millisInThreeMonths));
+            customerSubscriber.setCreateDate(createDate);
+            customerSubscriber.setLastModified(new Date());
+
+            customerSubscriberService.save(customerSubscriber);
+        }
+    }
+    private void initDevice(){
+        Random random = new Random();
+        List<Vendor> allVendor = vendorService.getAll();
+        List<String> allVendorId = allVendor.stream().map(Vendor::getId).toList();
+        // Lấy tất cả các loại thiết bị
+        Device.DeviceType[] deviceTypes = Device.DeviceType.values();
+
+        for(int i = 0; i< 10000; i++){
+            Device device = new Device();
+            device.setId(StringUtil.generateUUID());
+            // Tạo tên và model ngẫu nhiên
+            device.setName("Device " + (i + 1));
+            device.setModel("Model " + (i + 1));
+            // Tạo serialNumber ngẫu nhiên
+            device.setSerialNumber("SN-" + (random.nextInt(1000000) + 100000));
+            // Chọn ngẫu nhiên vendorId từ danh sách vendor
+            device.setVendorId(allVendorId.get(random.nextInt(allVendorId.size() - 1)));
+            // Chọn ngẫu nhiên loại thiết bị từ DeviceType
+            device.setType(deviceTypes[random.nextInt(deviceTypes.length)].ordinal() + 1);
+            // Cập nhật ngày tạo và ngày sửa đổi ngẫu nhiên
+            Date createAt = new Date(System.currentTimeMillis() - random.nextInt(1000000000)); // Ngày tạo ngẫu nhiên
+            device.setCreateDate(createAt);
+            device.setLastModified(new Date(createAt.getTime() + random.nextInt(1000000000)));
+            deviceService.save(device);
+        }
+    }
+    private void initApiStatusLog(){
+        Random random = new Random();
+        String[] methods = {"GET", "POST", "PUT", "DELETE"};
+        String[] urls = {"/api/users", "/api/orders", "/api/products", "/api/payments", "api/liveview"};
+        Integer[] statusCodes = {200, 201,400, 404,100, 500,502,503};
+
+        for (int i = 0; i < 10000; i++){
+            ApiStatusLog log = new ApiStatusLog();
+            log.setId(StringUtil.generateUUID());
+            log.setUrl(urls[random.nextInt(urls.length)]);
+            log.setMethod(methods[random.nextInt(methods.length)]);
+            log.setStatusCode(statusCodes[random.nextInt(statusCodes.length)]);
+            log.setDurationTime((long) random.nextInt(10_001));
+            apiStatusLogService.save(log);
+        }
+
+
     }
 
 }
