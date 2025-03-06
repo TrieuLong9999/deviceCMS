@@ -79,7 +79,7 @@ public class FakeDataController {
 
         if(allUserId.isEmpty()) return;
         Random random = new Random();
-        String[] platforms = {"web", "app_desktop", "tv", "android_app", "ios_app"};
+        String[] platforms = {"web", "app", "tv"};
         String[] versions = {"1.0", "1.1", "2.0", "2.1", "3.0"};
         String[] messages = {
                 "Great experience!", "Needs improvement.", "Love the app!",
@@ -153,7 +153,7 @@ public class FakeDataController {
 
         if(allUserId.isEmpty()) return;
         Random random = new Random();
-        String[] platforms = {"web", "app_desktop", "tv", "android_app", "ios_app"};
+        String[] platforms = {"web", "app", "tv"};
         String[] versions = {"1.0", "1.1", "2.0", "2.1", "3.0"};
         String[] messages = {
                 "Great experience!", "Needs improvement.", "Love the app!",
@@ -164,7 +164,7 @@ public class FakeDataController {
             Feedback tempFeedback = new Feedback();
             tempFeedback.setId(StringUtil.generateUUID());
             tempFeedback.setUserId(allUserId.get(random.nextInt(allUserId.size()-1)));
-            tempFeedback.setRating(1 + 0.5f * random.nextInt(9));
+            tempFeedback.setRating(1f + random.nextInt(5)); // Random từ 1 đến 5
             tempFeedback.setMessage( messages[random.nextInt(messages.length)]);
             tempFeedback.setPlatform(platforms[random.nextInt(platforms.length)]);
             tempFeedback.setVersion(versions[random.nextInt(versions.length)]);
