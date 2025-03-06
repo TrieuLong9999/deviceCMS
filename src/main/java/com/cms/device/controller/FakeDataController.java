@@ -203,13 +203,13 @@ public class FakeDataController {
         String[] urls = {"/api/users", "/api/orders", "/api/products", "/api/payments"};
         Integer[] statusCodes = {200, 401, 100, 500};
 
-        for (int i = 0; i < 1000; i++){
+        for (int i = 0; i < 10000; i++){
             ApiStatusLog log = new ApiStatusLog();
             log.setId(StringUtil.generateUUID());
             log.setUrl(urls[random.nextInt(urls.length)]);
             log.setMethod(methods[random.nextInt(methods.length)]);
             log.setStatusCode(statusCodes[random.nextInt(statusCodes.length)]);
-            log.setDurationTime((long) random.nextInt(10_001));
+            log.setDurationTime((long) random.nextInt(5_001));
             apiStatusLogService.save(log);
         }
         return ResponseEntity.ok(responseObject);
@@ -401,7 +401,7 @@ public class FakeDataController {
             log.setUrl(urls[random.nextInt(urls.length)]);
             log.setMethod(methods[random.nextInt(methods.length)]);
             log.setStatusCode(statusCodes[random.nextInt(statusCodes.length)]);
-            log.setDurationTime((long) random.nextInt(10_001));
+            log.setDurationTime((long) random.nextInt(5_001));
             apiStatusLogService.save(log);
         }
 
