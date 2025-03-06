@@ -1,8 +1,5 @@
 # Sử dụng OpenJDK 17 làm môi trường runtime
-FROM openjdk:17-jdk-slim
-
-# Đặt biến môi trường để giảm log cảnh báo
-ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom"
+FROM openjdk:17-alpine
 
 # Tạo thư mục chứa ứng dụng trong container
 WORKDIR /app
