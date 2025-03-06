@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -162,8 +164,12 @@ public class FakeDataController {
 
         for (int i = 0 ; i < 10000; i++){
             Feedback tempFeedback = new Feedback();
+            User userChoose = allUser.get(random.nextInt(allUserId.size()-1));
+
             tempFeedback.setId(StringUtil.generateUUID());
-            tempFeedback.setUserId(allUserId.get(random.nextInt(allUserId.size()-1)));
+            tempFeedback.setUserId(userChoose.getId());
+            tempFeedback.setName(userChoose.getName());
+
             tempFeedback.setRating(1f + random.nextInt(5)); // Random từ 1 đến 5
             tempFeedback.setMessage( messages[random.nextInt(messages.length)]);
             tempFeedback.setPlatform(platforms[random.nextInt(platforms.length)]);
@@ -400,6 +406,50 @@ public class FakeDataController {
         }
 
 
+    }
+    @GetMapping("fake-revenue-for-month")
+    public ResponseEntity<ResponseObject> fakeRevenue( @RequestParam(value = "month", defaultValue = "3") int month){
+
+        ResponseObject responseObject = new ResponseObject();
+        responseObject.setCodeResponse(StaticCode.CodeResponse.Success);
+        int currentYear = LocalDate.now().getYear();
+        // Lấy ngày đầu tiên của tháng đó trong năm hiện tại
+        // Lấy ngày đầu tiên của tháng được truyền vào
+        LocalDate localDate = LocalDate.of(currentYear, month, 1);
+
+        // Chuyển LocalDate thành Date
+        Date fakeDate =  Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Random random = new Random();
+
+        List<User> allUser = userService.findAll();
+
+        List<String> allUserId = allUser.stream().map(User::getId).toList();
+        List<String> SERVICES = Arrays.asList("record", "cloud");
+        Map<String, Long> PRICE_MAP = Map.of(
+                "record", 50000L,
+                "cloud", 100000L
+        );
+        List<Long> DURATION_OPTIONS = Arrays.asList(1L, 3L, 7L);
+        for (Integer i = 0 ; i < 1000; i++){
+            CustomerSubscriber customerSubscriber = new CustomerSubscriber();
+            customerSubscriber.setId(StringUtil.generateUUID());
+            customerSubscriber.setUserId(allUserId.get(random.nextInt(allUserId.size() - 1)));
+
+            // Chọn service ngẫu nhiên
+            String selectedService = SERVICES.get(random.nextInt(SERVICES.size()));
+            customerSubscriber.setService(selectedService);
+
+            // Chọn thời gian sử dụng từ danh sách (1, 3, 7 ngày)
+            customerSubscriber.setDuration(DURATION_OPTIONS.get(random.nextInt(DURATION_OPTIONS.size())));
+            customerSubscriber.setPrice(customerSubscriber.getDuration()*(PRICE_MAP.get(selectedService)));
+
+            customerSubscriber.setCreateDate(fakeDate);
+            customerSubscriber.setLastModified(fakeDate);
+
+            customerSubscriberService.save(customerSubscriber);
+        }
+
+        return ResponseEntity.ok(responseObject);
     }
 
 }

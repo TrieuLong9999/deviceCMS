@@ -16,6 +16,7 @@ public class Feedback {
     private String version;
     private Date createAt;
     private Date lastModified;
+    private String name;
 
     public Feedback() {
     }
@@ -82,5 +83,13 @@ public class Feedback {
 
     public void setLastModified(Date lastModified) {
         this.lastModified = lastModified;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

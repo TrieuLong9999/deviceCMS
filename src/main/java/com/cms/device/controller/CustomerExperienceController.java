@@ -75,9 +75,10 @@ public class CustomerExperienceController {
 
         responseListObject.setPage((long)baseFormRequest.getPage());
         responseListObject.setPageSize((long)baseFormRequest.getPageSize());
+        Page<Feedback> data = feedbackService.findAllByOrderByCreateAtDesc(baseFormRequest.toPageable());
 
-        responseListObject.setData(feedbackService.findFeedbackWithUser(baseFormRequest.toPageable()));
-        responseListObject.setTotal(feedbackService.countTotalFeedback());
+        responseListObject.setData(data.stream().toList());
+        responseListObject.setTotal(data.getTotalElements());
         return ResponseEntity.ok(responseListObject);
     }
     @GetMapping("feedback-rating-platform")
