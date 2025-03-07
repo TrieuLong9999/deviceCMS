@@ -43,7 +43,8 @@ public class BusinessActivitiesController {
         Long totalUserNewInMonth = userService.countUsersInCurrentMonth(startOfMonth, startOfNextMonth, allUserIds);
         // Long total using in month
         Long totalUsingThisMonth = customerSubscriberService.countUniqueUsersInCurrentMonth(startOfMonth,startOfNextMonth, allUserIds);
-
+        if(totalUsingThisMonth == null) totalUsingThisMonth = 0L;
+        if (allUser == null) allUser = new ArrayList<>();
 
         Map<String, Object> dataResponse = new HashMap<>();
 
