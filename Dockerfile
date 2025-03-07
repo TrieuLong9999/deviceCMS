@@ -1,5 +1,5 @@
-# Sử dụng OpenJDK 17 làm môi trường runtime
-FROM openjdk:17-alpine
+# Sử dụng một base image OpenJDK 17 Slim
+FROM openjdk:17-jdk-slim
 
 # Tạo thư mục chứa ứng dụng trong container
 WORKDIR /app
