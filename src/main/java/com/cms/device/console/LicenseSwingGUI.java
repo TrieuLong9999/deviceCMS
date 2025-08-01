@@ -1068,23 +1068,17 @@ public class LicenseSwingGUI extends JFrame {
      * Giả lập API call để demo
      */
     private void simulateAPICall(String endpoint, String method, String description) {
-        try {
-            String url = API_BASE_URL + endpoint;
-            log("🌐 " + method + " " + url);
-            log("📡 " + description + "...");
-            
-            // Giả lập network delay
-            int delay = 300 + random.nextInt(700); // 300-1000ms
-            Thread.sleep(delay);
-            
-            // Giả lập response
-            int statusCode = 200; // Success
-            log("✅ HTTP " + statusCode + " - Server response (" + delay + "ms)");
-            
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log("⚠️ API call bị gián đoạn");
-        }
+        String url = API_BASE_URL + endpoint;
+        log("🌐 " + method + " " + url);
+        log("📡 " + description + "...");
+        
+        // Loại bỏ hoàn toàn network delay để tăng tốc độ
+        // int delay = 300 + random.nextInt(700); // 300-1000ms
+        // Thread.sleep(delay);
+        
+        // Giả lập response ngay lập tức
+        int statusCode = 200; // Success
+        log("✅ HTTP " + statusCode + " - Server response (0ms)");
     }
 
     /**

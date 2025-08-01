@@ -185,18 +185,15 @@ public class LicenseConsoleMenu {
             return;
         }
         System.out.println("🔄 Đang kết nối tới server...");
-        try {
-            Thread.sleep(1000);
-            System.out.println("✅ Kết nối server thành công!");
-            System.out.println("📋 Thông tin license từ server:");
-            System.out.println("   - License Key: " + licenseKey);
-            System.out.println("   - Trạng thái: " + ((Boolean) licenseData.get("isActive") ? "Hoạt động" : "Không hoạt động"));
-            System.out.println("   - Số thiết bị tối đa: " + licenseData.get("maxDevices"));
-            System.out.println("   - Ngày hết hạn: " + licenseData.get("expiryDate"));
-            System.out.println("   - Server response time: " + System.currentTimeMillis() % 1000 + "ms");
-        } catch (InterruptedException e) {
-            System.out.println("❌ Lỗi kết nối tới server!");
-        }
+        // Loại bỏ delay để tăng tốc độ
+        // Thread.sleep(1000);
+        System.out.println("✅ Kết nối server thành công!");
+        System.out.println("📋 Thông tin license từ server:");
+        System.out.println("   - License Key: " + licenseKey);
+        System.out.println("   - Trạng thái: " + ((Boolean) licenseData.get("isActive") ? "Hoạt động" : "Không hoạt động"));
+        System.out.println("   - Số thiết bị tối đa: " + licenseData.get("maxDevices"));
+        System.out.println("   - Ngày hết hạn: " + licenseData.get("expiryDate"));
+        System.out.println("   - Server response time: " + System.currentTimeMillis() % 1000 + "ms");
         waitForEnter();
     }
 
@@ -220,35 +217,31 @@ public class LicenseConsoleMenu {
         }
 
         System.out.println("🔄 Đang giải mã license key...");
-        try {
-            Thread.sleep(1500);
-            // Giả lập thông tin được giải mã từ key (ở thực tế bạn nên thực sự giải mã)
-            String decodedInfo = "Company: VHTC, Version: 1.0, Devices: 12, Expiry: 2025-12-31";
-            System.out.println("✅ Giải mã thành công!");
-            System.out.println("📋 Thông tin được giải mã:");
-            System.out.println("   - Mã gốc: " + encodedKey);
-            System.out.println("   - Thông tin: " + decodedInfo);
-            System.out.println("   - Thuật toán: RSA-2048");
-            System.out.println("   - Trạng thái: Hợp lệ");
+        // Loại bỏ delay để tăng tốc độ
+        // Thread.sleep(1500);
+        // Giả lập thông tin được giải mã từ key (ở thực tế bạn nên thực sự giải mã)
+        String decodedInfo = "Company: VHTC, Version: 1.0, Devices: 12, Expiry: 2025-12-31";
+        System.out.println("✅ Giải mã thành công!");
+        System.out.println("📋 Thông tin được giải mã:");
+        System.out.println("   - Mã gốc: " + encodedKey);
+        System.out.println("   - Thông tin: " + decodedInfo);
+        System.out.println("   - Thuật toán: RSA-2048");
+        System.out.println("   - Trạng thái: Hợp lệ");
 
-            int maxDevices = 12;
-            String expiryDate = "2025-12-31";
+        int maxDevices = 12;
+        String expiryDate = "2025-12-31";
 
-            Map<String, Object> licenseData = allLicenses.get(encodedKey);
-            licenseData.put("isActive", true);
-            licenseData.put("maxDevices", maxDevices);
-            licenseData.put("expiryDate", expiryDate);
-            licenseData.put("decodedKey", decodedInfo);
+        Map<String, Object> licenseData = allLicenses.get(encodedKey);
+        licenseData.put("isActive", true);
+        licenseData.put("maxDevices", maxDevices);
+        licenseData.put("expiryDate", expiryDate);
+        licenseData.put("decodedKey", decodedInfo);
 
-            // Set là license đang active
-            activeLicenseKey = encodedKey;
-            
-            // Auto-save changes
-            autoSaveData();
-
-        } catch (InterruptedException e) {
-            System.out.println("❌ Lỗi trong quá trình giải mã!");
-        }
+        // Set là license đang active
+        activeLicenseKey = encodedKey;
+        
+        // Auto-save changes
+        autoSaveData();
         waitForEnter();
     }
 
@@ -576,9 +569,10 @@ public class LicenseConsoleMenu {
 
         System.out.println("🔄 Đang giải mã và xác thực license key...");
 
-        try {
-            Thread.sleep(800);
+        // Loại bỏ delay để tăng tốc độ
+        // Thread.sleep(800);
 
+        try {
             int idx = offlineLicenseKey.lastIndexOf(".");
             if (idx == -1) {
                 System.out.println("❌ Định dạng license key không hợp lệ!");
@@ -792,12 +786,9 @@ public class LicenseConsoleMenu {
         // Giả lập API call để tra cứu license
         System.out.println("🌐 GET https://api.vhtc.com.vn/license-server/v1/licenses/lookup");
         System.out.println("📡 Tra cứu license trên license server...");
-        try {
-            Thread.sleep(400 + (int)(Math.random() * 600)); // 400-1000ms delay
-            System.out.println("✅ HTTP 200 - Server response (750ms)");
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        // Loại bỏ delay để tăng tốc độ
+        // Thread.sleep(400 + (int)(Math.random() * 600)); // 400-1000ms delay
+        System.out.println("✅ HTTP 200 - Server response (0ms)");
 
         // Tìm kiếm license trong hệ thống
         Map<String, Object> licenseData = allLicenses.get(licenseKey);

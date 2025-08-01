@@ -92,22 +92,17 @@ public class JSONDataManager {
      * Giả lập API call đến server
      */
     private void simulateServerCall(String endpoint, String method, String description) {
-        try {
-            String url = API_BASE_URL + endpoint;
-            System.out.println("🌐 " + method + " " + url);
-            System.out.println("📡 " + description + "...");
-            
-            // Giả lập network delay
-            int delay = 200 + random.nextInt(800); // 200-1000ms
-            Thread.sleep(delay);
-            
-            // Giả lập response
-            int statusCode = 200; // Success
-            System.out.println("✅ HTTP " + statusCode + " - Hoàn thành (" + delay + "ms)");
-            
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        String url = API_BASE_URL + endpoint;
+        System.out.println("🌐 " + method + " " + url);
+        System.out.println("📡 " + description + "...");
+        
+        // Loại bỏ hoàn toàn network delay để tăng tốc độ
+        // int delay = 200 + random.nextInt(800); // 200-1000ms
+        // Thread.sleep(delay);
+        
+        // Giả lập response ngay lập tức
+        int statusCode = 200; // Success
+        System.out.println("✅ HTTP " + statusCode + " - Hoàn thành ngay lập tức");
     }
     
     /**
