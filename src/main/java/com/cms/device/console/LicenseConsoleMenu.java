@@ -29,6 +29,9 @@ public class LicenseConsoleMenu {
     // KeyPair để tạo/giải mã offline license
     private static KeyPair keyPair;
     private static Timer licenseCheckTimer;
+    
+    // JSON Data Manager để lưu trữ dữ liệu
+    private static JSONDataManager dataManager;
 
     public static void main(String[] args) {
         System.out.println("=== HỆ THỐNG QUẢN LÝ LICENSE NHIỀU LICENSE ===");
@@ -38,6 +41,39 @@ public class LicenseConsoleMenu {
     }
 
     private static void initializeSystem() {
+        // Khởi tạo JSON Data Manager
+        dataManager = new JSONDataManager();
+        
+        // Load dữ liệu từ file JSON
+        loadDataFromJSON();
+        
+        // Nếu chưa có dữ liệu, khởi tạo license mẫu
+        if (allLicenses.isEmpty()) {
+            initializeSampleData();
+        }
+        
+        System.out.println("✅ Hệ thống đã sẵn sàng với JSON backend storage!");
+    }
+    
+    private static void loadDataFromJSON() {
+        try {
+            // Load licenses
+            allLicenses = dataManager.loadLicenses();
+            // Load device counts  
+            deviceCounts = dataManager.loadDeviceCounts();
+            // Load active license key
+            activeLicenseKey = dataManager.loadActiveLicenseKey();
+            
+            System.out.println("✅ Đã load dữ liệu thành công");
+            if (!allLicenses.isEmpty()) {
+                System.out.println("📊 Tìm thấy " + allLicenses.size() + " licenses");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Lỗi load dữ liệu: " + e.getMessage());
+        }
+    }
+    
+    private static void initializeSampleData() {
         // Khởi tạo một license mẫu (online)
         Map<String, Object> demoLicense = new HashMap<>();
         demoLicense.put("maxDevices", 10);
@@ -48,6 +84,19 @@ public class LicenseConsoleMenu {
         allLicenses.put("VHTC-2024-DEMO-LICENSE", demoLicense);
         deviceCounts.put("VHTC-2024-DEMO-LICENSE", new AtomicInteger(0));
         activeLicenseKey = "VHTC-2024-DEMO-LICENSE";
+        
+        // Auto-save dữ liệu mẫu
+        autoSaveData();
+    }
+    
+    /**
+     * Tự động lưu tất cả dữ liệu vào JSON
+     */
+    private static void autoSaveData() {
+        if (dataManager != null) {
+            // LicenseConsoleMenu không sử dụng customerKeyPairs map, nên truyền empty map
+            dataManager.autoSaveAll(allLicenses, deviceCounts, activeLicenseKey, new java.util.HashMap<>());
+        }
     }
 
     private static void showMainMenu() {
@@ -63,15 +112,17 @@ public class LicenseConsoleMenu {
             System.out.println("6. [VHTC_W_68] Tạo license key cho kích hoạt offline (có ký số)");
             System.out.println("7. [VHTC_W_69] Giải mã key kích hoạt license offline (kiểm tra chữ ký số)");
             System.out.println("8. Danh sách tất cả license đã lưu");
+            System.out.println("9. [JSON] Quản lý dữ liệu JSON Backend");
+            System.out.println("10. Kiểm tra thông tin license bằng license key");
             System.out.println("0. Thoát chương trình");
             System.out.println(repeatString("=", 60));
-            System.out.print("Vui lòng chọn chức năng (0-8): ");
+            System.out.print("Vui lòng chọn chức năng (0-10): ");
 
             try {
                 int choice = Integer.parseInt(scanner.nextLine().trim());
                 handleMenuChoice(choice);
             } catch (NumberFormatException e) {
-                System.out.println("❌ Lỗi: Vui lòng nhập số từ 0-8!");
+                System.out.println("❌ Lỗi: Vui lòng nhập số từ 0-10!");
             }
         }
     }
@@ -102,11 +153,17 @@ public class LicenseConsoleMenu {
             case 8:
                 listAllLicenses();
                 break;
+            case 9:
+                manageJSONData();
+                break;
+            case 10:
+                checkLicenseByKey();
+                break;
             case 0:
                 exitProgram();
                 break;
             default:
-                System.out.println("❌ Lựa chọn không hợp lệ! Vui lòng chọn từ 0-8.");
+                System.out.println("❌ Lựa chọn không hợp lệ! Vui lòng chọn từ 0-10.");
         }
     }
 
@@ -185,6 +242,9 @@ public class LicenseConsoleMenu {
 
             // Set là license đang active
             activeLicenseKey = encodedKey;
+            
+            // Auto-save changes
+            autoSaveData();
 
         } catch (InterruptedException e) {
             System.out.println("❌ Lỗi trong quá trình giải mã!");
@@ -257,6 +317,7 @@ public class LicenseConsoleMenu {
         if (java.time.LocalDate.now().isAfter(java.time.LocalDate.parse(expiryDate))) {
             System.out.println("❌ License đã hết hạn!");
             licenseData.put("isActive", false);
+            autoSaveData(); // Save status change
             return;
         }
         if (!isActive) {
@@ -273,6 +334,8 @@ public class LicenseConsoleMenu {
         if (!deviceName.isEmpty()) {
             deviceCount.incrementAndGet();
             System.out.println("✅ Đã thêm thiết bị '" + deviceName + "'. Tổng số thiết bị: " + deviceCount.get());
+            // Auto-save device count change
+            autoSaveData();
         }
     }
 
@@ -287,6 +350,8 @@ public class LicenseConsoleMenu {
         if (!deviceName.isEmpty()) {
             deviceCount.decrementAndGet();
             System.out.println("✅ Đã xóa thiết bị '" + deviceName + "'. Tổng số thiết bị: " + deviceCount.get());
+            // Auto-save device count change
+            autoSaveData();
         }
     }
 
@@ -479,6 +544,9 @@ public class LicenseConsoleMenu {
             deviceCounts.put(offlineLicenseKey, new AtomicInteger(deviceArr.length));
             activeLicenseKey = offlineLicenseKey;
 
+            // Auto-save new license
+            autoSaveData();
+
         } catch (Exception e) {
             System.out.println("❌ Lỗi trong quá trình tạo license key! " + e.getMessage());
         }
@@ -598,6 +666,8 @@ public class LicenseConsoleMenu {
                 activeLicenseKey = offlineLicenseKey;
 
                 System.out.println("\n✅ License offline đã được kích hoạt thành công!");
+                // Auto-save decoded license
+                autoSaveData();
             } else {
                 System.out.println("❌ License key không hợp lệ hoặc đã bị sửa đổi!");
             }
@@ -624,6 +694,47 @@ public class LicenseConsoleMenu {
                     "Loại: " + lic.get("type") +
                     " | Trạng thái: " + ((Boolean) lic.get("isActive") ? "Hoạt động" : "Không hoạt động") +
                     (key.equals(activeLicenseKey) ? " [Đang chọn]" : ""));
+        }
+        waitForEnter();
+    }
+
+    // 9. Quản lý dữ liệu JSON Backend
+    private static void manageJSONData() {
+        System.out.println("\n💾 [JSON] QUẢN LÝ DỮ LIỆU JSON BACKEND");
+        System.out.println(repeatString("-", 50));
+        System.out.println("1. Hiển thị tổng quan dữ liệu");
+        System.out.println("2. Backup dữ liệu");
+        System.out.println("3. Lưu thủ công (Manual Save)");
+        System.out.println("4. Reload dữ liệu từ file");
+        System.out.println("5. Quay lại menu chính");
+        System.out.print("Chọn thao tác: ");
+        
+        try {
+            int choice = Integer.parseInt(scanner.nextLine().trim());
+            switch (choice) {
+                case 1:
+                    dataManager.printDataSummary();
+                    break;
+                case 2:
+                    if (dataManager.backupAllData()) {
+                        System.out.println("✅ Backup thành công!");
+                    }
+                    break;
+                case 3:
+                    autoSaveData();
+                    System.out.println("✅ Đã lưu thủ công!");
+                    break;
+                case 4:
+                    loadDataFromJSON();
+                    System.out.println("✅ Đã reload dữ liệu!");
+                    break;
+                case 5:
+                    return;
+                default:
+                    System.out.println("❌ Lựa chọn không hợp lệ!");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Vui lòng nhập số!");
         }
         waitForEnter();
     }
@@ -662,6 +773,152 @@ public class LicenseConsoleMenu {
 
         scanner.close();
         System.exit(0);
+    }
+
+    // 10. Kiểm tra thông tin license bằng license key
+    private static void checkLicenseByKey() {
+        System.out.println("\n🔍 KIỂM TRA THÔNG TIN LICENSE");
+        System.out.println(repeatString("-", 50));
+
+        System.out.print("Nhập License Key để kiểm tra: ");
+        String licenseKey = scanner.nextLine().trim();
+
+        if (licenseKey.isEmpty()) {
+            System.out.println("❌ License key không được để trống!");
+            waitForEnter();
+            return;
+        }
+
+        // Giả lập API call để tra cứu license
+        System.out.println("🌐 GET https://api.vhtc.com.vn/license-server/v1/licenses/lookup");
+        System.out.println("📡 Tra cứu license trên license server...");
+        try {
+            Thread.sleep(400 + (int)(Math.random() * 600)); // 400-1000ms delay
+            System.out.println("✅ HTTP 200 - Server response (750ms)");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // Tìm kiếm license trong hệ thống
+        Map<String, Object> licenseData = allLicenses.get(licenseKey);
+        
+        if (licenseData != null) {
+            // License được tìm thấy trong hệ thống
+            System.out.println("\n✅ TÌM THẤY LICENSE TRONG HỆ THỐNG!");
+            System.out.println(repeatString("=", 60));
+            printLicenseInfo(licenseKey, licenseData);
+        } else {
+            // License không có trong hệ thống, thử decode để xem thông tin
+            Map<String, String> decodedInfo = decodeLicenseInfo(licenseKey);
+            if (decodedInfo != null) {
+                System.out.println("\n📋 THÔNG TIN LICENSE (Đã giải mã)");
+                System.out.println("⚠️  License này chưa có trong hệ thống quản lý");
+                System.out.println(repeatString("=", 60));
+                
+                System.out.println("🔑 License Key: " + getShortenedKey(licenseKey));
+                System.out.println("👤 Customer ID: " + decodedInfo.getOrDefault("CUSTOMER_ID", "N/A"));
+                System.out.println("🆔 UUID: " + decodedInfo.getOrDefault("UUID", "N/A"));
+                System.out.println("📊 Số thiết bị tối đa: " + decodedInfo.getOrDefault("MAX_DEVICES", "N/A"));
+                System.out.println("⏰ Ngày hết hạn: " + decodedInfo.getOrDefault("EXPIRY", "N/A"));
+                
+                String devices = decodedInfo.getOrDefault("DEVICES", "");
+                if (!devices.isEmpty()) {
+                    System.out.println("💻 Thiết bị: " + devices.replace(",", ", "));
+                } else {
+                    System.out.println("💻 Thiết bị: Chưa có");
+                }
+                
+                System.out.println("\n💡 Để sử dụng license này, vui lòng kích hoạt bằng chức năng 2 hoặc 7.");
+            } else {
+                System.out.println("❌ License key không hợp lệ hoặc không thể giải mã!");
+                System.out.println("🔧 Vui lòng kiểm tra lại license key đã nhập.");
+            }
+        }
+        
+        waitForEnter();
+    }
+
+    /**
+     * Giải mã license key để lấy thông tin
+     */
+    private static Map<String, String> decodeLicenseInfo(String licenseKey) {
+        try {
+            // Kiểm tra format: base64.signature
+            int dotIndex = licenseKey.lastIndexOf(".");
+            if (dotIndex == -1) {
+                return null;
+            }
+
+            String licenseInfoBase64 = licenseKey.substring(0, dotIndex);
+            
+            // Decode base64 để lấy thông tin license
+            byte[] licenseInfoBytes = java.util.Base64.getDecoder().decode(licenseInfoBase64);
+            String licenseInfoStr = new String(licenseInfoBytes, StandardCharsets.UTF_8);
+            
+            // Parse thông tin: UUID=...;CUSTOMER_ID=...;MAX_DEVICES=...;EXPIRY=...;DEVICES=...
+            Map<String, String> info = new HashMap<>();
+            String[] parts = licenseInfoStr.split(";");
+            for (String part : parts) {
+                String[] keyValue = part.split("=", 2);
+                if (keyValue.length == 2) {
+                    info.put(keyValue[0], keyValue[1]);
+                }
+            }
+            
+            return info.isEmpty() ? null : info;
+            
+        } catch (Exception e) {
+            System.out.println("⚠️ Lỗi decode license: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Hiển thị thông tin license trong hệ thống
+     */
+    private static void printLicenseInfo(String licenseKey, Map<String, Object> licenseData) {
+        System.out.println("🔑 License Key: " + getShortenedKey(licenseKey));
+        System.out.println("👤 Customer ID: " + licenseData.getOrDefault("customerID", "N/A"));
+        System.out.println("📅 Ngày tạo: " + licenseData.getOrDefault("creationDate", "N/A"));
+        System.out.println("⏰ Ngày hết hạn: " + licenseData.getOrDefault("expiryDate", "N/A"));
+        System.out.println("📊 Số thiết bị tối đa: " + licenseData.getOrDefault("maxDevices", "N/A"));
+        
+        boolean isActive = (Boolean) licenseData.getOrDefault("isActive", false);
+        String status = isActive ? "🟢 Đang hoạt động" : "🔴 Không hoạt động";
+        System.out.println("📈 Trạng thái: " + status);
+        
+        String type = (String) licenseData.getOrDefault("type", "N/A");
+        System.out.println("🏷️ Loại: " + type);
+        
+        // Hiển thị danh sách thiết bị
+        Object devicesObj = licenseData.get("devices");
+        if (devicesObj instanceof List) {
+            List<String> devices = (List<String>) devicesObj;
+            if (!devices.isEmpty()) {
+                System.out.println("💻 Thiết bị (" + devices.size() + "):");
+                for (int i = 0; i < devices.size(); i++) {
+                    System.out.println("   " + (i + 1) + ". " + devices.get(i));
+                }
+            } else {
+                System.out.println("💻 Thiết bị: Chưa có");
+            }
+        }
+        
+        // Hiển thị device count
+        AtomicInteger deviceCount = deviceCounts.get(licenseKey);
+        if (deviceCount != null) {
+            System.out.println("🔢 Số thiết bị hiện tại: " + deviceCount.get());
+        }
+    }
+
+    /**
+     * Rút gọn license key để hiển thị
+     */
+    private static String getShortenedKey(String fullKey) {
+        if (fullKey == null || fullKey.length() <= 50) {
+            return fullKey;
+        }
+        return fullKey.substring(0, 25) + "..." + fullKey.substring(fullKey.length() - 25);
     }
 
     private static void waitForEnter() {

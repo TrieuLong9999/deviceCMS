@@ -20,6 +20,8 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Timer;
 import java.util.*;
+import java.util.Base64;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -30,6 +32,10 @@ public class LicenseSwingGUI extends JFrame {
     private final Map<String, Map<String, Object>> allLicenses = new HashMap<>();
     private final Map<String, AtomicInteger> deviceCounts = new HashMap<>();
     private final Map<String, KeyPair> customerKeyPairs = new HashMap<>();
+    private final Map<String, String> customerNames = new HashMap<>(); // Map Customer ID -> Customer Name
+    private final JSONDataManager dataManager;
+    private final Random random = new Random();
+    private static final String API_BASE_URL = "https://api.vhtc.com.vn/license-server/v1";
     private Timer licenseCheckTimer;
 
     // --- UI Components ---
@@ -47,15 +53,20 @@ public class LicenseSwingGUI extends JFrame {
         setSize(1400, 800);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
+        
+        // Khởi tạo JSONDataManager
+        dataManager = new JSONDataManager();
 
         // --- Top Action Panel ---
         JPanel topActionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        JButton manageKeysButton = new JButton("Quản lý Key");
+        JButton manageKeysButton = new JButton("Quản lý Khách hàng");
         JButton createLicenseButton = new JButton("Tạo License");
         JButton activateOfflineButton = new JButton("Kích hoạt License Offline");
         JButton activateOnlineButton = new JButton("Kích hoạt License Online");
+        JButton checkLicenseButton = new JButton("Kiểm tra License");
         topActionPanel.add(manageKeysButton);
         topActionPanel.add(createLicenseButton);
+        topActionPanel.add(checkLicenseButton);
         topActionPanel.add(activateOfflineButton);
         topActionPanel.add(activateOnlineButton);
 
@@ -90,7 +101,7 @@ public class LicenseSwingGUI extends JFrame {
         licensePanel.add(toolbarPanel, BorderLayout.NORTH);
 
         // --- License Table ---
-        String[] columnNames = {"", "Trạng thái", "Customer ID", "Ngày tạo", "Ngày hết hạn", "Số thiết bị", "License Key (rút gọn)"};
+        String[] columnNames = {"", "Trạng thái", "Mã khách hàng", "Ngày tạo", "Ngày hết hạn", "Số thiết bị", "License Key (rút gọn)"};
         licenseTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
@@ -138,6 +149,7 @@ public class LicenseSwingGUI extends JFrame {
         createLicenseButton.addActionListener(e -> generateOfflineLicenseKey());
         activateOfflineButton.addActionListener(e -> activateOfflineLicense());
         activateOnlineButton.addActionListener(e -> activateOnlineLicense());
+        checkLicenseButton.addActionListener(e -> checkLicenseByKey());
 
         activateButton.addActionListener(e -> activateSelectedLicenses());
         deactivateButton.addActionListener(e -> deactivateSelectedLicenses());
@@ -149,6 +161,10 @@ public class LicenseSwingGUI extends JFrame {
 
         // --- Initial State ---
         updateActionButtons(0);
+        
+        // Load dữ liệu từ JSON sau khi UI đã setup hoàn tất
+        loadDataFromJSON();
+        
         initializeSystem();
     }
 
@@ -237,9 +253,11 @@ public class LicenseSwingGUI extends JFrame {
     }
 
     private void openKeyManager() {
-        KeyManagerDialog keyManagerDialog = new KeyManagerDialog(this, customerKeyPairs);
+        KeyManagerDialog keyManagerDialog = new KeyManagerDialog(this, customerKeyPairs, customerNames);
         keyManagerDialog.setVisible(true);
-        log("Quản lý key đã đóng.");
+        // Auto-save key pairs sau khi dialog đóng (có thể có thay đổi)
+        saveDataToJSON();
+        log("Quản lý key đã đóng và lưu dữ liệu.");
     }
 
     private void log(String message) {
@@ -251,12 +269,12 @@ public class LicenseSwingGUI extends JFrame {
 
     private void generateOfflineLicenseKey() {
         if (customerKeyPairs.isEmpty()) {
-            log("❌ Chưa có Customer ID nào có key. Vui lòng tạo key trong 'Quản lý Key Offline' trước.");
+            log("❌ Chưa có Mã khách hàng nào có key. Vui lòng tạo key trong 'Quản lý Key Offline' trước.");
             return;
         }
 
         Object[] customerIDs = customerKeyPairs.keySet().toArray();
-        String selectedCustomerID = (String) JOptionPane.showInputDialog(this, "Chọn Customer ID để tạo license:", "Chọn Customer ID", JOptionPane.QUESTION_MESSAGE, null, customerIDs, customerIDs[0]);
+        String selectedCustomerID = (String) JOptionPane.showInputDialog(this, "Chọn Mã khách hàng để tạo license:", "Chọn Mã khách hàng", JOptionPane.QUESTION_MESSAGE, null, customerIDs, customerIDs[0]);
         if (selectedCustomerID == null) {
             log("❌ Thao tác tạo license đã bị hủy.");
             return;
@@ -360,6 +378,7 @@ public class LicenseSwingGUI extends JFrame {
 
             log("✅ Tạo license thành công cho '" + selectedCustomerID + "'. License đã được thêm vào danh sách.");
             refreshLicenseTable();
+            saveDataToJSON();
 
         } catch (Exception e) {
             log("❌ Lỗi tạo license: " + e.getMessage());
@@ -411,6 +430,7 @@ public class LicenseSwingGUI extends JFrame {
 
         if (activatedCount > 0) {
             refreshLicenseTable();
+            saveDataToJSON();
         }
         log("✅ Hoàn tất. Đã xử lý kích hoạt " + activatedCount + " license.");
     }
@@ -493,6 +513,7 @@ public class LicenseSwingGUI extends JFrame {
             }
         });
         refreshLicenseTable();
+        saveDataToJSON();
     }
 
     private void deleteSelectedLicenses() {
@@ -514,6 +535,7 @@ public class LicenseSwingGUI extends JFrame {
             }
             log("✅ Đã xóa " + deletedCount + " license.");
             refreshLicenseTable();
+            saveDataToJSON();
         }
     }
 
@@ -660,7 +682,8 @@ public class LicenseSwingGUI extends JFrame {
     }
 
     private void activateOfflineLicense() {
-        String licenseKeyStr = JOptionPane.showInputDialog(this, "Vui lòng nhập License Key để kích hoạt:", "Kích hoạt License Offline", JOptionPane.PLAIN_MESSAGE);
+        String licenseKeyStr = showLicenseKeyInputDialog("Kích hoạt License Offline", 
+            "Vui lòng nhập License Key để kích hoạt:");
 
         if (licenseKeyStr == null || licenseKeyStr.trim().isEmpty()) {
             log("ℹ️ Thao tác kích hoạt offline đã bị hủy.");
@@ -732,8 +755,12 @@ public class LicenseSwingGUI extends JFrame {
 
                 allLicenses.put(licenseKeyStr, licenseData);
                 deviceCounts.put(licenseKeyStr, new AtomicInteger(devices.size()));
+                
+                // Giả lập API call để đăng ký license với server
+                simulateAPICall("/licenses/activate", "POST", "Đăng ký license " + customerIdFromLicense + " lên server");
 
                 refreshLicenseTable();
+                saveDataToJSON();
                 log("✅ Kích hoạt thành công license cho: " + customerIdFromLicense);
                 JOptionPane.showMessageDialog(this, "License đã được kích hoạt thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
             } else {
@@ -749,7 +776,8 @@ public class LicenseSwingGUI extends JFrame {
     }
 
     private void activateOnlineLicense() {
-        String licenseKeyStr = JOptionPane.showInputDialog(this, "Vui lòng nhập License Key để kích hoạt:", "Kích hoạt License Online", JOptionPane.PLAIN_MESSAGE);
+        String licenseKeyStr = showLicenseKeyInputDialog("Kích hoạt License Online", 
+            "Vui lòng nhập License Key để kích hoạt:");
 
         if (licenseKeyStr == null || licenseKeyStr.trim().isEmpty()) {
             log("ℹ️ Thao tác kích hoạt online đã bị hủy.");
@@ -823,8 +851,12 @@ public class LicenseSwingGUI extends JFrame {
 
                 allLicenses.put(licenseKeyStr, licenseData);
                 deviceCounts.put(licenseKeyStr, new AtomicInteger(devices.size()));
+                
+                // Giả lập API call để xác thực và đăng ký license online
+                simulateAPICall("/licenses/verify-online", "POST", "Xác thực license " + customerIdFromLicense + " với license server");
 
                 refreshLicenseTable();
+                saveDataToJSON();
                 log("✅ Kích hoạt online thành công license cho: " + customerIdFromLicense);
                 JOptionPane.showMessageDialog(this, "License đã được kích hoạt online thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
             } else {
@@ -945,6 +977,7 @@ public class LicenseSwingGUI extends JFrame {
                 ((List<String>) licenseData.get("devices")).add(newDevice);
                 owner.log("✅ Đã thêm thiết bị '" + newDevice + "'.");
                 owner.refreshLicenseTable();
+                owner.saveDataToJSON();
             }
         }
 
@@ -958,6 +991,8 @@ public class LicenseSwingGUI extends JFrame {
                 deviceListModel.set(selectedIndex, newDevice);
                 ((List<String>) licenseData.get("devices")).set(selectedIndex, newDevice);
                 owner.log("✅ Đã sửa thiết bị '" + currentDevice + "' -> '" + newDevice + "'.");
+                owner.refreshLicenseTable();
+                owner.saveDataToJSON();
             }
         }
 
@@ -971,8 +1006,236 @@ public class LicenseSwingGUI extends JFrame {
                 ((List<String>) licenseData.get("devices")).remove(deviceToDelete);
                 owner.log("✅ Đã xóa thiết bị '" + deviceToDelete + "'.");
                 owner.refreshLicenseTable();
+                owner.saveDataToJSON();
             }
         }
+    }
+
+    /**
+     * Load dữ liệu từ JSON files
+     */
+    private void loadDataFromJSON() {
+        try {
+            // Load licenses, device counts và key pairs
+            Map<String, Map<String, Object>> loadedLicenses = dataManager.loadLicenses();
+            Map<String, AtomicInteger> loadedDeviceCounts = dataManager.loadDeviceCounts();
+            
+            allLicenses.clear();
+            allLicenses.putAll(loadedLicenses);
+            
+            deviceCounts.clear();
+            deviceCounts.putAll(loadedDeviceCounts);
+            
+            // Load key pairs và customer names
+            dataManager.loadKeyPairsWithNames(customerKeyPairs, customerNames);
+            
+            log("✅ Đã load " + allLicenses.size() + " licenses và " + customerKeyPairs.size() + " key từ hệ thống");
+            
+            // Refresh UI nếu đã khởi tạo
+            if (licenseTable != null) {
+                refreshLicenseTable();
+            }
+        } catch (Exception e) {
+            log("⚠️ Không thể load dữ liệu từ Server: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Save dữ liệu vào JSON files
+     */
+    private void saveDataToJSON() {
+        try {
+            String activeLicenseKey = null;
+            for (Map.Entry<String, Map<String, Object>> entry : allLicenses.entrySet()) {
+                if (Boolean.TRUE.equals(entry.getValue().get("isActive"))) {
+                    activeLicenseKey = entry.getKey();
+                    break;
+                }
+            }
+            
+            boolean success = dataManager.autoSaveAllWithNames(allLicenses, deviceCounts, activeLicenseKey, customerKeyPairs, customerNames);
+            if (success) {
+                log("💾 Đã tự động lưu dữ liệu vào hệ thống");
+            } else {
+                log("❌ Có lỗi khi lưu dữ liệu!");
+            }
+        } catch (Exception e) {
+            log("❌ Lỗi save dữ liệu: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Giả lập API call để demo
+     */
+    private void simulateAPICall(String endpoint, String method, String description) {
+        try {
+            String url = API_BASE_URL + endpoint;
+            log("🌐 " + method + " " + url);
+            log("📡 " + description + "...");
+            
+            // Giả lập network delay
+            int delay = 300 + random.nextInt(700); // 300-1000ms
+            Thread.sleep(delay);
+            
+            // Giả lập response
+            int statusCode = 200; // Success
+            log("✅ HTTP " + statusCode + " - Server response (" + delay + "ms)");
+            
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log("⚠️ API call bị gián đoạn");
+        }
+    }
+
+    /**
+     * Hiển thị dialog với textarea để nhập license key
+     */
+    private String showLicenseKeyInputDialog(String title, String message) {
+        JTextArea textArea = new JTextArea(4, 40);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        panel.add(new JLabel(message), BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        JLabel infoLabel = new JLabel("<html><i>💡 Mẹo: Bạn có thể paste license key dài vào đây</i></html>");
+        infoLabel.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 11));
+        panel.add(infoLabel, BorderLayout.SOUTH);
+        
+        int result = JOptionPane.showConfirmDialog(this, panel, title, 
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        
+        if (result == JOptionPane.OK_OPTION) {
+            return textArea.getText();
+        }
+        return null;
+    }
+
+    /**
+     * Kiểm tra thông tin license bằng cách nhập license key
+     */
+    private void checkLicenseByKey() {
+        String licenseKeyInput = showLicenseKeyInputDialog("Kiểm tra License", 
+            "Nhập License Key để kiểm tra thông tin:");
+
+        if (licenseKeyInput == null || licenseKeyInput.trim().isEmpty()) {
+            log("ℹ️ Thao tác kiểm tra license đã bị hủy.");
+            return;
+        }
+
+        String licenseKey = licenseKeyInput.trim();
+        
+        // Giả lập API call để kiểm tra license trên server
+        simulateAPICall("/licenses/lookup", "GET", "Tra cứu license trên license server");
+        
+        // Tìm kiếm license trong hệ thống
+        Map<String, Object> licenseData = allLicenses.get(licenseKey);
+        
+        if (licenseData != null) {
+            // License được tìm thấy trong hệ thống
+            log("✅ Tìm thấy license trong hệ thống!");
+            LicenseDetailDialog dialog = new LicenseDetailDialog(this, licenseKey, licenseData);
+            dialog.setVisible(true);
+        } else {
+            // License không có trong hệ thống, thử decode để xem thông tin
+            try {
+                Map<String, String> decodedInfo = decodeLicenseKey(licenseKey);
+                if (decodedInfo != null) {
+                    showDecodedLicenseInfo(licenseKey, decodedInfo);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "❌ License key không hợp lệ hoặc không thể giải mã!\n\n" +
+                        "Vui lòng kiểm tra lại license key đã nhập.", 
+                        "Lỗi License", 
+                        JOptionPane.ERROR_MESSAGE);
+                    log("❌ Không thể giải mã license key: " + getShortenedKey(licenseKey));
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "❌ Lỗi khi xử lý license key!\n\n" + e.getMessage(), 
+                    "Lỗi", 
+                    JOptionPane.ERROR_MESSAGE);
+                log("❌ Lỗi xử lý license key: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Giải mã license key để lấy thông tin
+     */
+    private Map<String, String> decodeLicenseKey(String licenseKey) {
+        try {
+            // Kiểm tra format: base64.signature
+            int dotIndex = licenseKey.lastIndexOf(".");
+            if (dotIndex == -1) {
+                return null;
+            }
+
+            String licenseInfoBase64 = licenseKey.substring(0, dotIndex);
+            
+            // Decode base64 để lấy thông tin license
+            byte[] licenseInfoBytes = Base64.getDecoder().decode(licenseInfoBase64);
+            String licenseInfoStr = new String(licenseInfoBytes, StandardCharsets.UTF_8);
+            
+            // Parse thông tin: UUID=...;CUSTOMER_ID=...;MAX_DEVICES=...;EXPIRY=...;DEVICES=...
+            Map<String, String> info = new HashMap<>();
+            String[] parts = licenseInfoStr.split(";");
+            for (String part : parts) {
+                String[] keyValue = part.split("=", 2);
+                if (keyValue.length == 2) {
+                    info.put(keyValue[0], keyValue[1]);
+                }
+            }
+            
+            return info.isEmpty() ? null : info;
+            
+        } catch (Exception e) {
+            log("⚠️ Lỗi decode license: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Hiển thị thông tin license đã được decode
+     */
+    private void showDecodedLicenseInfo(String licenseKey, Map<String, String> decodedInfo) {
+        StringBuilder message = new StringBuilder();
+        message.append("📋 THÔNG TIN LICENSE (Đã giải mã)\n");
+        message.append("═══════════════════════════════════════\n\n");
+        
+        message.append("🔑 License Key: ").append(getShortenedKey(licenseKey)).append("\n\n");
+        
+        message.append("👤 Customer ID: ").append(decodedInfo.getOrDefault("CUSTOMER_ID", "N/A")).append("\n");
+        message.append("🆔 UUID: ").append(decodedInfo.getOrDefault("UUID", "N/A")).append("\n");
+        message.append("📊 Số thiết bị tối đa: ").append(decodedInfo.getOrDefault("MAX_DEVICES", "N/A")).append("\n");
+        message.append("⏰ Ngày hết hạn: ").append(decodedInfo.getOrDefault("EXPIRY", "N/A")).append("\n");
+        
+        String devices = decodedInfo.getOrDefault("DEVICES", "");
+        if (!devices.isEmpty()) {
+            message.append("💻 Thiết bị: ").append(devices.replace(",", ", ")).append("\n");
+        } else {
+            message.append("💻 Thiết bị: Chưa có\n");
+        }
+        
+        message.append("\n⚠️ LƯU Ý: License này chưa có trong hệ thống quản lý.\n");
+        message.append("Để sử dụng, vui lòng kích hoạt license này.");
+        
+        JTextArea textArea = new JTextArea(message.toString());
+        textArea.setEditable(false);
+        textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(500, 350));
+        
+        JOptionPane.showMessageDialog(this, scrollPane, "Thông tin License", JOptionPane.INFORMATION_MESSAGE);
+        
+        log("📋 Đã hiển thị thông tin license (chưa kích hoạt): " + getShortenedKey(licenseKey));
     }
 
     public static void main(String[] args) {
