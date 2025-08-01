@@ -377,23 +377,76 @@ public class LicenseConsoleMenu {
                 @Override
                 public void run() {
                     System.out.println("\n🔄 [" + java.time.LocalTime.now() + "] Kiểm tra định kỳ tất cả license...");
+                    
                     int idx = 1;
+                    int expiredCount = 0;
+                    int soonExpireCount = 0;
+                    boolean hasChanges = false;
+                    
                     for (Map.Entry<String, Map<String, Object>> entry : allLicenses.entrySet()) {
                         String key = entry.getKey();
                         Map<String, Object> licenseData = entry.getValue();
                         AtomicInteger deviceCount = deviceCounts.get(key);
+                        boolean wasActive = (Boolean) licenseData.getOrDefault("isActive", false);
 
                         String expiryDate = (String) licenseData.get("expiryDate");
-                        // Cập nhật trạng thái nếu hết hạn
-                        if (java.time.LocalDate.now().isAfter(java.time.LocalDate.parse(expiryDate))) {
-                            licenseData.put("isActive", false);
+                        String status = "Hoạt động";
+                        
+                        try {
+                            // Cập nhật trạng thái nếu hết hạn
+                            if (java.time.LocalDate.now().isAfter(java.time.LocalDate.parse(expiryDate))) {
+                                licenseData.put("isActive", false);
+                                status = "Hết hạn";
+                                expiredCount++;
+                                
+                                // Kiểm tra nếu license vừa hết hạn
+                                if (wasActive) {
+                                    System.out.println("  🚨 License '" + getShortenedKey(key) + "' đã hết hạn và được tự động vô hiệu hóa!");
+                                    hasChanges = true;
+                                }
+                            } else {
+                                // Kiểm tra license sắp hết hạn (trong 7 ngày)
+                                java.time.LocalDate expiry = java.time.LocalDate.parse(expiryDate);
+                                long daysRemaining = java.time.LocalDate.now().until(expiry).getDays();
+                                
+                                if (daysRemaining <= 7 && daysRemaining > 0) {
+                                    status = "Sắp hết hạn (" + daysRemaining + " ngày)";
+                                    soonExpireCount++;
+                                } else if ((Boolean) licenseData.get("isActive")) {
+                                    status = "Hoạt động (" + daysRemaining + " ngày)";
+                                } else {
+                                    status = "Vô hiệu hóa";
+                                }
+                            }
+                        } catch (Exception e) {
+                            status = "Lỗi định dạng ngày";
                         }
-                        System.out.println("  " + (idx++) + ". License: " + key +
-                                " | Trạng thái: " + ((Boolean) licenseData.get("isActive") ? "Hoạt động" : "Hết hạn") +
+                        
+                        System.out.println("  " + (idx++) + ". License: " + getShortenedKey(key) +
+                                " | Trạng thái: " + status +
                                 " | Ngày hết hạn: " + licenseData.get("expiryDate") +
                                 " | Số thiết bị: " + deviceCount.get() + "/" + licenseData.get("maxDevices")
                         );
                     }
+                    
+                    // Auto-save nếu có thay đổi
+                    if (hasChanges) {
+                        autoSaveData();
+                        System.out.println("  💾 Đã tự động lưu thay đổi trạng thái license.");
+                    }
+                    
+                    // Tổng kết
+                    System.out.print("  📊 Tổng kết: " + allLicenses.size() + " license");
+                    if (expiredCount > 0) {
+                        System.out.print(" | 🚨 " + expiredCount + " hết hạn");
+                    }
+                    if (soonExpireCount > 0) {
+                        System.out.print(" | ⚠️ " + soonExpireCount + " sắp hết hạn");
+                    }
+                    if (expiredCount == 0 && soonExpireCount == 0) {
+                        System.out.print(" | ✅ Tất cả còn hiệu lực");
+                    }
+                    System.out.println();
                 }
             }, 0, intervalSeconds * 1000L);
 

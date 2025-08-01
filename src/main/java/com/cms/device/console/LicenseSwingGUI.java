@@ -165,6 +165,9 @@ public class LicenseSwingGUI extends JFrame {
         // Load dữ liệu từ JSON sau khi UI đã setup hoàn tất
         loadDataFromJSON();
         
+        // Thêm test license đã hết hạn để kiểm tra logic
+        addTestExpiredLicense();
+        
         initializeSystem();
     }
 
@@ -540,6 +543,8 @@ public class LicenseSwingGUI extends JFrame {
     }
 
     private String calculateStatus(Map<String, Object> lic) {
+        String customerID = (String) lic.get("customerID");
+        
         if ("Chưa kích hoạt".equals(lic.get("type"))) {
             return "Chưa kích hoạt";
         }
@@ -550,12 +555,20 @@ public class LicenseSwingGUI extends JFrame {
             String expiryDateStr = (String) lic.get("expiryDate");
             if (expiryDateStr != null && !expiryDateStr.isEmpty()) {
                 Date expiryDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").parse(expiryDateStr);
-                if (new Date().after(expiryDate)) {
+                Date currentDate = new Date();
+                
+                // Debug logging
+                log("🔍 [DEBUG] Checking '" + customerID + "': Current=" + currentDate + ", Expiry=" + expiryDate + ", IsAfter=" + currentDate.after(expiryDate));
+                
+                if (currentDate.after(expiryDate)) {
+                    log("⚠️ [DEBUG] License '" + customerID + "' đã hết hạn! Đang cập nhật isActive = false");
                     lic.put("isActive", false);
                     return "Hết hạn";
                 }
             }
-        } catch (Exception e) { /* Ignore */ }
+        } catch (Exception e) { 
+            log("❌ [DEBUG] Lỗi parse ngày cho '" + customerID + "': " + e.getMessage());
+        }
         return "Hoạt động";
     }
 
@@ -613,13 +626,11 @@ public class LicenseSwingGUI extends JFrame {
                 @Override
                 public void run() {
                     SwingUtilities.invokeLater(() -> {
-                        log("⏰ Đang kiểm tra định kỳ tất cả license...");
-                        refreshLicenseTable();
-                        log("⏰ Hoàn tất kiểm tra.");
+                        performPeriodicLicenseCheck();
                     });
                 }
             }, 0, 5000);
-            log("✅ Bắt đầu kiểm tra định kỳ.");
+            log("✅ Bắt đầu kiểm tra định kỳ thời hạn license (mỗi 5 giây).");
         } else {
             if (licenseCheckTimer != null) {
                 licenseCheckTimer.cancel();
@@ -627,6 +638,88 @@ public class LicenseSwingGUI extends JFrame {
             }
             log("⏹️ Đã dừng kiểm tra định kỳ.");
         }
+    }
+    
+    /**
+     * Thực hiện kiểm tra định kỳ và tự động cập nhật trạng thái license
+     */
+    private void performPeriodicLicenseCheck() {
+        if (allLicenses.isEmpty()) {
+            return;
+        }
+        
+        log("⏰ Đang kiểm tra định kỳ " + allLicenses.size() + " license...");
+        
+        int expiredCount = 0;
+        int soonExpireCount = 0;
+        boolean hasChanges = false;
+        
+        for (Map.Entry<String, Map<String, Object>> entry : allLicenses.entrySet()) {
+            Map<String, Object> licenseData = entry.getValue();
+            boolean wasActive = (Boolean) licenseData.getOrDefault("isActive", false);
+            String customerID = (String) licenseData.get("customerID");
+            String expiryDateStr = (String) licenseData.get("expiryDate");
+            
+            // Debug: Log kiểm tra license
+            log("🔍 Kiểm tra license '" + customerID + "' - Expiry: " + expiryDateStr + " - WasActive: " + wasActive);
+            
+            // Kiểm tra và cập nhật trạng thái
+            String newStatus = calculateStatus(licenseData);
+            boolean isActiveNow = (Boolean) licenseData.getOrDefault("isActive", false);
+            
+            // Debug: Log kết quả check
+            log("📊 Kết quả: Status = '" + newStatus + "' - IsActiveNow: " + isActiveNow);
+            
+            // Đếm tất cả license hết hạn
+            if ("Hết hạn".equals(newStatus)) {
+                log("📊 [DEBUG] License '" + customerID + "' có trạng thái HẾT HẠN");
+                expiredCount++;
+                
+                // Nếu license vừa mới hết hạn (từ active -> inactive)
+                if (wasActive && !isActiveNow) {
+                    log("🚨 License của '" + customerID + "' đã hết hạn và được tự động vô hiệu hóa!");
+                    hasChanges = true;
+                }
+            }
+            
+            // Kiểm tra license sắp hết hạn (trong 7 ngày)
+            try {
+                if (expiryDateStr != null && !expiryDateStr.isEmpty()) {
+                    Date expiryDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").parse(expiryDateStr);
+                    long daysRemaining = (expiryDate.getTime() - System.currentTimeMillis()) / (1000 * 60 * 60 * 24);
+                    
+                    if (daysRemaining > 0 && daysRemaining <= 7) {
+                        soonExpireCount++;
+                    }
+                }
+            } catch (Exception e) { /* Ignore parsing errors */ }
+        }
+        
+        // Refresh UI để hiển thị trạng thái mới
+        refreshLicenseTable();
+        
+        // Auto-save nếu có thay đổi
+        if (hasChanges) {
+            saveDataToJSON();
+            log("💾 Đã tự động lưu thay đổi trạng thái license.");
+        }
+        
+        // Thông báo tổng kết
+        StringBuilder summary = new StringBuilder("⏰ Kiểm tra hoàn tất: ");
+        summary.append(allLicenses.size()).append(" license");
+        
+        if (expiredCount > 0) {
+            summary.append(" | 🚨 ").append(expiredCount).append(" hết hạn");
+        }
+        if (soonExpireCount > 0) {
+            summary.append(" | ⚠️ ").append(soonExpireCount).append(" sắp hết hạn");
+        }
+        if (expiredCount == 0 && soonExpireCount == 0) {
+            summary.append(" | ✅ Tất cả còn hiệu lực");
+        }
+        
+        log(summary.toString());
+        log("📈 [DEBUG] Thống kê: ExpiredCount=" + expiredCount + ", SoonExpireCount=" + soonExpireCount + ", HasChanges=" + hasChanges);
     }
 
     @Override
@@ -642,8 +735,53 @@ public class LicenseSwingGUI extends JFrame {
         // Logic will be moved to activateSelectedLicenses
     }
 
+    /**
+     * Thêm test license đã hết hạn để kiểm tra logic
+     */
+    private void addTestExpiredLicense() {
+        String testKey = "TEST-EXPIRED-LICENSE-" + System.currentTimeMillis();
+        Map<String, Object> testLicense = new HashMap<>();
+        testLicense.put("isSelected", false);
+        testLicense.put("licenseKey", testKey);
+        testLicense.put("customerID", "TEST-EXPIRED");
+        testLicense.put("creationDate", "01/01/2024 12:00:00");
+        testLicense.put("isActive", true); // Đặt active để test auto-disable
+        testLicense.put("type", "offline-verified");
+        testLicense.put("maxDevices", 5);
+        testLicense.put("expiryDate", "01/01/2024 23:59:59"); // Ngày trong quá khứ
+        testLicense.put("devices", new ArrayList<>());
+        
+        allLicenses.put(testKey, testLicense);
+        deviceCounts.put(testKey, new AtomicInteger(0));
+        
+        log("🧪 Đã thêm test license hết hạn để kiểm tra logic tự động.");
+    }
+
+    /**
+     * Xóa test license đã hết hạn
+     */
+    private void removeTestExpiredLicense() {
+        // Tìm và xóa test license
+        String testKey = null;
+        for (String key : allLicenses.keySet()) {
+            if (key.startsWith("TEST-EXPIRED-LICENSE-")) {
+                testKey = key;
+                break;
+            }
+        }
+        
+        if (testKey != null) {
+            allLicenses.remove(testKey);
+            deviceCounts.remove(testKey);
+            refreshLicenseTable();
+            log("🧪 Đã xóa test license hết hạn.");
+        }
+    }
+
     private void initializeSystem() {
         log("Hệ thống quản lý License v2.0 đã sẵn sàng.");
+        log("💡 Bật 'Tự động kiểm tra thời hạn' để test chức năng auto-disable license hết hạn.");
+        log("🔧 [DEBUG] Mode: Đã bật debug logging để kiểm tra vấn đề license hết hạn.");
     }
 
     private void updateSelectAllCheckBoxState() {
