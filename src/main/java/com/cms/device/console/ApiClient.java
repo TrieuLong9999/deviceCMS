@@ -36,7 +36,7 @@ public class ApiClient {
     
     // Customer APIs
     public static boolean createCustomer(CustomerDto customer) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.saveCustomer(customer);
         }
         
@@ -50,7 +50,7 @@ public class ApiClient {
     }
     
     public static CustomerDto getCustomer(String customerId) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getCustomer(customerId);
         }
         
@@ -64,7 +64,7 @@ public class ApiClient {
     }
     
     public static List<CustomerDto> getAllCustomers() {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getAllCustomers();
         }
         
@@ -78,7 +78,7 @@ public class ApiClient {
     }
     
     public static boolean updateCustomer(String customerId, CustomerDto customer) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.updateCustomer(customerId, customer);
         }
         
@@ -92,7 +92,7 @@ public class ApiClient {
     }
     
     public static boolean deleteCustomer(String customerId) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.deleteCustomer(customerId);
         }
         
@@ -107,7 +107,7 @@ public class ApiClient {
     
     // License APIs
     public static boolean createLicense(LicenseDto license) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.saveLicense(license);
         }
         
@@ -121,7 +121,7 @@ public class ApiClient {
     }
     
     public static LicenseDto getLicense(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getLicense(licenseKey);
         }
         
@@ -140,7 +140,7 @@ public class ApiClient {
     }
     
     public static List<LicenseDto> getAllLicenses() {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getAllLicenses();
         }
         
@@ -157,7 +157,7 @@ public class ApiClient {
     }
     
     public static List<LicenseDto> getLicensesByCustomer(String customerId) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getLicensesByCustomer(customerId);
         }
         
@@ -171,7 +171,7 @@ public class ApiClient {
     }
     
     public static boolean updateLicense(String licenseKey, LicenseDto license) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.updateLicense(licenseKey, license);
         }
         
@@ -188,7 +188,7 @@ public class ApiClient {
     }
     
     public static boolean deleteLicense(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.deleteLicense(licenseKey);
         }
         
@@ -205,7 +205,7 @@ public class ApiClient {
     }
     
     public static boolean activateLicense(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.activateLicense(licenseKey);
         }
         
@@ -219,7 +219,7 @@ public class ApiClient {
     }
     
     public static boolean deactivateLicense(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.deactivateLicense(licenseKey);
         }
         
@@ -234,7 +234,7 @@ public class ApiClient {
     
     // Device APIs
     public static boolean addDevice(DeviceDto device) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.saveDevice(device);
         }
         
@@ -248,7 +248,7 @@ public class ApiClient {
     }
     
     public static List<DeviceDto> getDevicesByLicense(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getDevicesByLicense(licenseKey);
         }
         
@@ -268,12 +268,14 @@ public class ApiClient {
     }
     
     public static boolean removeDevice(String licenseKey, String deviceName) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.removeDevice(licenseKey, deviceName);
         }
         
         try {
-            String response = makeRequest("DELETE", "/devices/license/" + licenseKey + "/name/" + deviceName, null);
+            DeviceDto deviceDto = new DeviceDto();
+            deviceDto.setLicenseKey(licenseKey);
+            String response = makeRequest("DELETE", "/devices/license/name/" + deviceName, objectMapper.writeValueAsString(deviceDto));
             return response != null;
         } catch (Exception e) {
             System.err.println("Error removing device: " + e.getMessage());
@@ -282,12 +284,14 @@ public class ApiClient {
     }
     
     public static boolean removeAllDevices(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.removeAllDevices(licenseKey);
         }
         
         try {
-            String response = makeRequest("DELETE", "/devices/license/" + licenseKey + "/all", null);
+            DeviceDto deviceDto = new DeviceDto();
+            deviceDto.setLicenseKey(licenseKey);
+            String response = makeRequest("POST", "/devices/license/all", objectMapper.writeValueAsString(deviceDto));
             return response != null;
         } catch (Exception e) {
             System.err.println("Error removing all devices: " + e.getMessage());
@@ -296,7 +300,7 @@ public class ApiClient {
     }
     
     public static int getDeviceCount(String licenseKey) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getDeviceCount(licenseKey);
         }
         
@@ -312,7 +316,7 @@ public class ApiClient {
     }
     
     public static boolean deviceExists(String licenseKey, String deviceName) {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.deviceExists(licenseKey, deviceName);
         }
         
@@ -326,7 +330,7 @@ public class ApiClient {
     }
     
     public static List<DeviceDto> getAllDevices() {
-        if (!isOnline) {
+        if (!testConnection()) {
             return OfflineStorage.getAllDevices();
         }
         
@@ -399,7 +403,7 @@ public class ApiClient {
     // Test connection to backend
     public static boolean testConnection() {
         try {
-            String response = makeRequest("GET", "/customers", null);
+            String response = makeRequest("GET", "/customers/online", null);
             isOnline = response != null;
             return isOnline;
         } catch (Exception e) {
