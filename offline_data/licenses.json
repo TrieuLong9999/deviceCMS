@@ -1,0 +1,25 @@
+[ {
+  "id" : null,
+  "licenseKey" : "VVVJRD1hYjVhMGVkNy0xZThiLTRlNDAtOTMxNi00NGIyOTdjODEyYWE7Q1VTVE9NRVJfSUQ9Y3VzdG9tZXItMTtNQVhfREVWSUNFUz0xMDtFWFBJUlk9MDIvMDgvMjAyNiAyMzo1OTo1OTtERVZJQ0VTPVNFUlZFUi0wMSxQQy0wMSxQQy0wMg==.f/oNRoXZe0FXeEggfeZ+1asl3Bsb++81H1KIUS1N0KtIT6lvjw3862Eoynoi+QnYULs8W/5yK51D+e8GvKeUpsF7QSZeSlAuD6OUeroFsy/RDWeh+Q9B4koAZO3xioebz6lTgwi8BGefMZEgWULqSxOaPDCYcdBHOk2oYZEtfh+YFP+sSWpz9kaaObu/L1j5ys1+nMEutsUpF2/0Df/2lmgrEwXswIV+Z3yEl1OhDfmiv8htXEI8JntAanL7uClZG6ov3rG464EteyST50aoBTwD58Sm0wEc+MW6NtP51FcssbhzyzRhIp0kYuPlv9muzQBf5gHI53UXx7DNWcA1YQ==",
+  "customerId" : "customer-1",
+  "creationDate" : "02/08/2025 16:06:24",
+  "expiryDate" : "02/08/2026 23:59:59",
+  "maxDevices" : 10,
+  "active" : false,
+  "licenseType" : "Chưa kích hoạt",
+  "createdAt" : null,
+  "updatedAt" : null,
+  "currentDeviceCount" : 0
+}, {
+  "id" : null,
+  "licenseKey" : "VVVJRD0wNDE2ZTZkNi0wNmY4LTRjYTgtYmMyMS02Y2ExNmE0OTg2NmQ7Q1VTVE9NRVJfSUQ9Y3VzdG9tZXItMTtNQVhfREVWSUNFUz0xMDtFWFBJUlk9MDIvMDgvMjAyNiAyMzo1OTo1OTtERVZJQ0VTPVNFUlZFUi0wMSxQQy0wMSxQQy0wMg==.c+efm7vb/3cCVQU30mg2O6G1zGbnMOXgHG6+L9sKoEtu2brfY/hlOKd6gVLhPHhMDMb/eG+NJHZgdg5n2EDbgjL/eg63HHa7jOiaO4+MmkqdOT1FoqFyu+JcSVNzZWAQCXcMWEqHjJ+xo4Onvhu2If9lILhpc8TlA8M2ILBqj051jY6UZ2eqABeC3usQaynoTzGrOkOE+3HIR4wL1aWuODH+RfJEsyOsp+p6o7/bOvLcRZBnJ7JWIN8afMyRIj+Q9Gn9Hedrzi//ZBBQtVNlfi3HjD9i6FaWP8v3zsFjeYr9wTIIGo5VvtyWN9lJcHQpdIdrgo3Lvw7xc8x7ktcmIQ==",
+  "customerId" : "customer-1",
+  "creationDate" : "02/08/2025 16:08:26",
+  "expiryDate" : "02/08/2026 23:59:59",
+  "maxDevices" : 10,
+  "active" : false,
+  "licenseType" : "Chưa kích hoạt",
+  "createdAt" : null,
+  "updatedAt" : null,
+  "currentDeviceCount" : 0
+} ]

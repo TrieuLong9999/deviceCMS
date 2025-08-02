@@ -1,0 +1,37 @@
+[ {
+  "id" : null,
+  "licenseKey" : "VVVJRD1iMWRhMTI2Zi1iZDI0LTQwODktYmYxYi1hNjkwMjE4NDM2Njc7Q1VTVE9NRVJfSUQ9Y3VzdG9tZXItMTtNQVhfREVWSUNFUz0xMDtFWFBJUlk9MDIvMDgvMjAyNiAyMzo1OTo1OTtERVZJQ0VTPVNFUlZFUi0wMSxQQy0wMSxQQy0wMg==.JYeUtce1EbLsrW2c+tksoGy5blB4cbol81DulcoAVw1GdG5oeI5smIuhEE2E7ye0qlPfW4dRoDOpweylwszrdSeEpCIMlTOi4wdr1ny6FKeIxOslILC6P6/mjDvvu+k0mL0/LYnCKEIOu2/e85PnaGPDgbGxRw5gBeRJaP3KoDwbRmBTWH0VKq4wiT4tL8PBFrGGJKDxgAS55hhr/HJj42auH598aAixGRK3LlvjE/ZYgUA4cz/VUH/pSl53tyOg8sB6bvmzOkCUv1masxdTMlw5ZFGHtK+Re5TcwKfiKdcxZO4D/80C/cn4gooDle1133ipMW9rBLmTy5Nv0eyZpg==",
+  "deviceName" : "PC-01",
+  "deviceId" : null,
+  "deviceType" : null,
+  "operatingSystem" : null,
+  "ipAddress" : null,
+  "active" : true,
+  "lastActivity" : null,
+  "createdAt" : "2025-08-02T15:53:17.3815899",
+  "updatedAt" : null
+}, {
+  "id" : null,
+  "licenseKey" : "VVVJRD1iMWRhMTI2Zi1iZDI0LTQwODktYmYxYi1hNjkwMjE4NDM2Njc7Q1VTVE9NRVJfSUQ9Y3VzdG9tZXItMTtNQVhfREVWSUNFUz0xMDtFWFBJUlk9MDIvMDgvMjAyNiAyMzo1OTo1OTtERVZJQ0VTPVNFUlZFUi0wMSxQQy0wMSxQQy0wMg==.JYeUtce1EbLsrW2c+tksoGy5blB4cbol81DulcoAVw1GdG5oeI5smIuhEE2E7ye0qlPfW4dRoDOpweylwszrdSeEpCIMlTOi4wdr1ny6FKeIxOslILC6P6/mjDvvu+k0mL0/LYnCKEIOu2/e85PnaGPDgbGxRw5gBeRJaP3KoDwbRmBTWH0VKq4wiT4tL8PBFrGGJKDxgAS55hhr/HJj42auH598aAixGRK3LlvjE/ZYgUA4cz/VUH/pSl53tyOg8sB6bvmzOkCUv1masxdTMlw5ZFGHtK+Re5TcwKfiKdcxZO4D/80C/cn4gooDle1133ipMW9rBLmTy5Nv0eyZpg==",
+  "deviceName" : "PC-02",
+  "deviceId" : null,
+  "deviceType" : null,
+  "operatingSystem" : null,
+  "ipAddress" : null,
+  "active" : true,
+  "lastActivity" : null,
+  "createdAt" : "2025-08-02T15:53:17.3826827",
+  "updatedAt" : null
+}, {
+  "id" : null,
+  "licenseKey" : "VVVJRD1hYjVhMGVkNy0xZThiLTRlNDAtOTMxNi00NGIyOTdjODEyYWE7Q1VTVE9NRVJfSUQ9Y3VzdG9tZXItMTtNQVhfREVWSUNFUz0xMDtFWFBJUlk9MDIvMDgvMjAyNiAyMzo1OTo1OTtERVZJQ0VTPVNFUlZFUi0wMSxQQy0wMSxQQy0wMg==.f/oNRoXZe0FXeEggfeZ+1asl3Bsb++81H1KIUS1N0KtIT6lvjw3862Eoynoi+QnYULs8W/5yK51D+e8GvKeUpsF7QSZeSlAuD6OUeroFsy/RDWeh+Q9B4koAZO3xioebz6lTgwi8BGefMZEgWULqSxOaPDCYcdBHOk2oYZEtfh+YFP+sSWpz9kaaObu/L1j5ys1+nMEutsUpF2/0Df/2lmgrEwXswIV+Z3yEl1OhDfmiv8htXEI8JntAanL7uClZG6ov3rG464EteyST50aoBTwD58Sm0wEc+MW6NtP51FcssbhzyzRhIp0kYuPlv9muzQBf5gHI53UXx7DNWcA1YQ==",
+  "deviceName" : "camea",
+  "deviceId" : null,
+  "deviceType" : null,
+  "operatingSystem" : null,
+  "ipAddress" : null,
+  "active" : true,
+  "lastActivity" : null,
+  "createdAt" : "2025-08-02T16:07:51.1374826",
+  "updatedAt" : null
+} ]

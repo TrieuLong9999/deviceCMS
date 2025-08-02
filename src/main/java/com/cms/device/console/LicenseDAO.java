@@ -1,9 +1,5 @@
 package com.cms.device.console;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,22 +7,16 @@ public class LicenseDAO {
     
     public static boolean saveLicense(String licenseKey, String customerId, String creationDate, 
                                     String expiryDate, int maxDevices, boolean isActive, String licenseType) {
-        String sql = "INSERT INTO licenses (license_key, customer_id, creation_date, expiry_date, max_devices, is_active, license_type) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try {
+            LicenseDto license = new LicenseDto(licenseKey, customerId);
+            license.setCreationDate(creationDate);
+            license.setExpiryDate(expiryDate);
+            license.setMaxDevices(maxDevices);
+            license.setActive(isActive);
+            license.setLicenseType(licenseType);
             
-            pstmt.setString(1, licenseKey);
-            pstmt.setString(2, customerId);
-            pstmt.setString(3, creationDate);
-            pstmt.setString(4, expiryDate);
-            pstmt.setInt(5, maxDevices);
-            pstmt.setBoolean(6, isActive);
-            pstmt.setString(7, licenseType);
-            
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+            return ApiClient.createLicense(license);
+        } catch (Exception e) {
             System.err.println("Error saving license: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -35,47 +25,39 @@ public class LicenseDAO {
     
     public static boolean upsertLicense(String licenseKey, String customerId, String creationDate, 
                                       String expiryDate, int maxDevices, boolean isActive, String licenseType) {
-        // First check if license exists
-        if (licenseExists(licenseKey)) {
-            // Update existing license
-            String sql = "UPDATE licenses SET customer_id = ?, creation_date = ?, expiry_date = ?, " +
-                        "max_devices = ?, is_active = ?, license_type = ? WHERE license_key = ?";
-            
-            try (Connection conn = DatabaseConfig.getConnection();
-                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try {
+            LicenseDto existingLicense = ApiClient.getLicense(licenseKey);
+            if (existingLicense != null) {
+                // Update existing license
+                existingLicense.setCustomerId(customerId);
+                existingLicense.setCreationDate(creationDate);
+                existingLicense.setExpiryDate(expiryDate);
+                existingLicense.setMaxDevices(maxDevices);
+                existingLicense.setActive(isActive);
+                existingLicense.setLicenseType(licenseType);
                 
-                pstmt.setString(1, customerId);
-                pstmt.setString(2, creationDate);
-                pstmt.setString(3, expiryDate);
-                pstmt.setInt(4, maxDevices);
-                pstmt.setBoolean(5, isActive);
-                pstmt.setString(6, licenseType);
-                pstmt.setString(7, licenseKey);
-                
-                return pstmt.executeUpdate() > 0;
-            } catch (SQLException e) {
-                System.err.println("Error updating existing license: " + e.getMessage());
-                e.printStackTrace();
-                return false;
+                return ApiClient.updateLicense(licenseKey, existingLicense);
+            } else {
+                // Create new license
+                return saveLicense(licenseKey, customerId, creationDate, expiryDate, maxDevices, isActive, licenseType);
             }
-        } else {
-            // Insert new license
-            return saveLicense(licenseKey, customerId, creationDate, expiryDate, maxDevices, isActive, licenseType);
+        } catch (Exception e) {
+            System.err.println("Error upserting license: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
     }
     
     public static boolean updateLicenseStatus(String licenseKey, boolean isActive, String licenseType) {
-        String sql = "UPDATE licenses SET is_active = ?, license_type = ? WHERE license_key = ?";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setBoolean(1, isActive);
-            pstmt.setString(2, licenseType);
-            pstmt.setString(3, licenseKey);
-            
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+        try {
+            LicenseDto license = ApiClient.getLicense(licenseKey);
+            if (license != null) {
+                license.setActive(isActive);
+                license.setLicenseType(licenseType);
+                return ApiClient.updateLicense(licenseKey, license);
+            }
+            return false;
+        } catch (Exception e) {
             System.err.println("Error updating license status: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -83,25 +65,15 @@ public class LicenseDAO {
     }
     
     /**
-     * Check and update expired licenses in the database
+     * Check and update expired licenses
      * @return Number of licenses that were updated to expired status
      */
     public static int checkAndUpdateExpiredLicenses() {
-        String sql = "UPDATE licenses SET is_active = false, license_type = 'Hết hạn' " +
-                    "WHERE expiry_date IS NOT NULL AND expiry_date != '' " +
-                    "AND is_active = true " +
-                    "AND license_type NOT IN ('Chưa kích hoạt', 'Hết hạn') " +
-                    "AND TO_TIMESTAMP(expiry_date, 'DD/MM/YYYY HH24:MI:SS') < NOW()";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            int updatedCount = pstmt.executeUpdate();
-            if (updatedCount > 0) {
-                System.out.println("Database: Updated " + updatedCount + " expired licenses");
-            }
-            return updatedCount;
-        } catch (SQLException e) {
+        try {
+            // This would be handled by the backend scheduled task
+            // For now, we'll just return 0 as the backend handles this automatically
+            return 0;
+        } catch (Exception e) {
             System.err.println("Error checking and updating expired licenses: " + e.getMessage());
             e.printStackTrace();
             return 0;
@@ -109,14 +81,9 @@ public class LicenseDAO {
     }
     
     public static boolean deleteLicense(String licenseKey) {
-        String sql = "DELETE FROM licenses WHERE license_key = ?";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, licenseKey);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+        try {
+            return ApiClient.deleteLicense(licenseKey);
+        } catch (Exception e) {
             System.err.println("Error deleting license: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -124,47 +91,31 @@ public class LicenseDAO {
     }
     
     public static boolean licenseExists(String licenseKey) {
-        String sql = "SELECT COUNT(*) FROM licenses WHERE license_key = ?";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, licenseKey);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            }
-        } catch (SQLException e) {
+        try {
+            LicenseDto license = ApiClient.getLicense(licenseKey);
+            return license != null;
+        } catch (Exception e) {
             System.err.println("Error checking license existence: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
-        
-        return false;
     }
     
     public static LicenseInfo getLicenseInfo(String licenseKey) {
-        String sql = "SELECT license_key, customer_id, creation_date, expiry_date, max_devices, is_active, license_type " +
-                    "FROM licenses WHERE license_key = ?";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, licenseKey);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return new LicenseInfo(
-                        rs.getString("license_key"),
-                        rs.getString("customer_id"),
-                        rs.getString("creation_date"),
-                        rs.getString("expiry_date"),
-                        rs.getInt("max_devices"),
-                        rs.getBoolean("is_active"),
-                        rs.getString("license_type")
-                    );
-                }
+        try {
+            LicenseDto license = ApiClient.getLicense(licenseKey);
+            if (license != null) {
+                return new LicenseInfo(
+                    license.getLicenseKey(),
+                    license.getCustomerId(),
+                    license.getCreationDate(),
+                    license.getExpiryDate(),
+                    license.getMaxDevices(),
+                    license.isActive(),
+                    license.getLicenseType()
+                );
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Error getting license info: " + e.getMessage());
             e.printStackTrace();
         }
@@ -173,61 +124,53 @@ public class LicenseDAO {
     }
     
     public static List<LicenseInfo> getAllLicenses() {
-        List<LicenseInfo> licenses = new ArrayList<>();
-        String sql = "SELECT license_key, customer_id, creation_date, expiry_date, max_devices, is_active, license_type " +
-                    "FROM licenses ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+        try {
+            List<LicenseDto> licenses = ApiClient.getAllLicenses();
+            List<LicenseInfo> licenseInfos = new ArrayList<>();
             
-            while (rs.next()) {
-                licenses.add(new LicenseInfo(
-                    rs.getString("license_key"),
-                    rs.getString("customer_id"),
-                    rs.getString("creation_date"),
-                    rs.getString("expiry_date"),
-                    rs.getInt("max_devices"),
-                    rs.getBoolean("is_active"),
-                    rs.getString("license_type")
+            for (LicenseDto license : licenses) {
+                licenseInfos.add(new LicenseInfo(
+                    license.getLicenseKey(),
+                    license.getCustomerId(),
+                    license.getCreationDate(),
+                    license.getExpiryDate(),
+                    license.getMaxDevices(),
+                    license.isActive(),
+                    license.getLicenseType()
                 ));
             }
-        } catch (SQLException e) {
+            
+            return licenseInfos;
+        } catch (Exception e) {
             System.err.println("Error getting all licenses: " + e.getMessage());
             e.printStackTrace();
+            return new ArrayList<>();
         }
-        
-        return licenses;
     }
     
     public static List<LicenseInfo> getLicensesByCustomer(String customerId) {
-        List<LicenseInfo> licenses = new ArrayList<>();
-        String sql = "SELECT license_key, customer_id, creation_date, expiry_date, max_devices, is_active, license_type " +
-                    "FROM licenses WHERE customer_id = ? ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try {
+            List<LicenseDto> licenses = ApiClient.getLicensesByCustomer(customerId);
+            List<LicenseInfo> licenseInfos = new ArrayList<>();
             
-            pstmt.setString(1, customerId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    licenses.add(new LicenseInfo(
-                        rs.getString("license_key"),
-                        rs.getString("customer_id"),
-                        rs.getString("creation_date"),
-                        rs.getString("expiry_date"),
-                        rs.getInt("max_devices"),
-                        rs.getBoolean("is_active"),
-                        rs.getString("license_type")
-                    ));
-                }
+            for (LicenseDto license : licenses) {
+                licenseInfos.add(new LicenseInfo(
+                    license.getLicenseKey(),
+                    license.getCustomerId(),
+                    license.getCreationDate(),
+                    license.getExpiryDate(),
+                    license.getMaxDevices(),
+                    license.isActive(),
+                    license.getLicenseType()
+                ));
             }
-        } catch (SQLException e) {
+            
+            return licenseInfos;
+        } catch (Exception e) {
             System.err.println("Error getting licenses by customer: " + e.getMessage());
             e.printStackTrace();
+            return new ArrayList<>();
         }
-        
-        return licenses;
     }
     
     public static class LicenseInfo {

@@ -29,6 +29,8 @@ public class LicenseSwingGUI extends JFrame {
     // --- Data Management ---
     // Database integration - removed in-memory storage
     private Timer licenseCheckTimer;
+    private JLabel connectionStatusLabel;
+    private boolean isOnline = false;
 
     // --- UI Components ---
     private final DefaultTableModel licenseTableModel;
@@ -47,15 +49,33 @@ public class LicenseSwingGUI extends JFrame {
         setLayout(new BorderLayout(10, 10));
 
         // --- Top Action Panel ---
-        JPanel topActionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        JPanel topActionPanel = new JPanel(new BorderLayout(5, 5));
+
+        // Left side - Action buttons
+        JPanel actionButtonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         JButton manageKeysButton = new JButton("Quản lý Key");
         JButton createLicenseButton = new JButton("Tạo License");
         JButton activateOfflineButton = new JButton("Kích hoạt License Offline");
         JButton activateOnlineButton = new JButton("Kích hoạt License Online");
-        topActionPanel.add(manageKeysButton);
-        topActionPanel.add(createLicenseButton);
-        topActionPanel.add(activateOfflineButton);
-        topActionPanel.add(activateOnlineButton);
+        actionButtonsPanel.add(manageKeysButton);
+        actionButtonsPanel.add(createLicenseButton);
+        actionButtonsPanel.add(activateOfflineButton);
+        actionButtonsPanel.add(activateOnlineButton);
+
+        // Right side - Connection status
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
+        connectionStatusLabel = new JLabel("Đang kiểm tra kết nối...");
+        connectionStatusLabel.setForeground(Color.GRAY);
+        JButton testConnectionButton = new JButton("Kiểm tra kết nối");
+        statusPanel.add(connectionStatusLabel);
+        statusPanel.add(testConnectionButton);
+
+        topActionPanel.add(actionButtonsPanel, BorderLayout.WEST);
+        topActionPanel.add(statusPanel, BorderLayout.EAST);
+
+        // Test connection on startup
+        testConnectionButton.addActionListener(e -> testConnection());
+        SwingUtilities.invokeLater(this::testConnection);
 
         // --- License Management Panel ---
         JPanel licensePanel = new JPanel(new BorderLayout(0, 10));
@@ -345,12 +365,12 @@ public class LicenseSwingGUI extends JFrame {
 
             // Save license to database
             boolean saveResult = LicenseDAO.saveLicense(
-                offlineLicenseKey, 
-                selectedCustomerID, 
-                creationDateTime, 
-                expiryDateTime, 
-                (Integer) maxDevicesSpinner.getValue(), 
-                false, 
+                offlineLicenseKey,
+                selectedCustomerID,
+                creationDateTime,
+                expiryDateTime,
+                (Integer) maxDevicesSpinner.getValue(),
+                false,
                 "Chưa kích hoạt"
             );
 
@@ -370,7 +390,7 @@ public class LicenseSwingGUI extends JFrame {
     private String findFullKeyFromRow(int row) {
         if (row < 0 || row >= licenseTableModel.getRowCount()) return null;
         String shortKey = (String) licenseTableModel.getValueAt(row, licenseTableModel.getColumnCount() - 1);
-        
+
         // Find the full key by searching through all licenses in database
         List<LicenseDAO.LicenseInfo> licenses = LicenseDAO.getAllLicenses();
         return licenses.stream()
@@ -472,7 +492,7 @@ public class LicenseSwingGUI extends JFrame {
                 int maxDevices = Integer.parseInt(dataMap.getOrDefault("MAX_DEVICES", "0"));
                 List<String> devices = new ArrayList<>(Arrays.asList(dataMap.getOrDefault("DEVICES", "").split(",")));
                 devices.removeIf(d -> d == null || d.trim().isEmpty());
-                
+
                 boolean updateResult = LicenseDAO.upsertLicense(
                     offlineLicenseKey,
                     customerIdFromLicense,
@@ -482,17 +502,17 @@ public class LicenseSwingGUI extends JFrame {
                     true,
                     "offline-verified"
                 );
-                
+
                 if (updateResult) {
                     // Add devices to database (remove existing devices first if updating)
                     if (LicenseDAO.licenseExists(offlineLicenseKey)) {
                         DeviceDAO.removeAllDevices(offlineLicenseKey);
                     }
-                    
+
                     for (String device : devices) {
                         DeviceDAO.addDevice(offlineLicenseKey, device.trim());
                     }
-                    
+
                     log("✅ License đã được cập nhật trong database với " + devices.size() + " thiết bị.");
                     return true;
                 } else {
@@ -527,7 +547,7 @@ public class LicenseSwingGUI extends JFrame {
                 }
             }
         }
-        
+
         if (deactivatedCount > 0) {
             refreshLicenseTable();
         }
@@ -611,7 +631,7 @@ public class LicenseSwingGUI extends JFrame {
 
         // Load licenses from database
         List<LicenseDAO.LicenseInfo> licenses = LicenseDAO.getAllLicenses();
-        
+
         licenses.stream()
                 .filter(lic -> matchesFilter(lic, filterText))
                 .forEach(lic -> {
@@ -646,7 +666,7 @@ public class LicenseSwingGUI extends JFrame {
 
     private void manualExpirationCheck() {
         log("🔍 Đang kiểm tra thủ công tất cả license...");
-        
+
         // Check and update expired licenses in database
         int expiredCount = LicenseDAO.checkAndUpdateExpiredLicenses();
         if (expiredCount > 0) {
@@ -654,12 +674,12 @@ public class LicenseSwingGUI extends JFrame {
         } else {
             log("✅ Không có license nào hết hạn.");
         }
-        
+
         // Refresh the table to show updated status
         refreshLicenseTable();
         log("🔍 Hoàn tất kiểm tra thủ công.");
     }
-    
+
     private void togglePeriodicCheck() {
         if (periodicCheckToggle.isSelected()) {
             if (licenseCheckTimer != null) licenseCheckTimer.cancel();
@@ -669,13 +689,13 @@ public class LicenseSwingGUI extends JFrame {
                 public void run() {
                     SwingUtilities.invokeLater(() -> {
                         log("⏰ Đang kiểm tra định kỳ tất cả license...");
-                        
+
                         // First, check and update expired licenses in database
                         int expiredCount = LicenseDAO.checkAndUpdateExpiredLicenses();
                         if (expiredCount > 0) {
                             log("⚠️ Đã cập nhật " + expiredCount + " license hết hạn trong database.");
                         }
-                        
+
                         // Then refresh the table to show updated status
                         refreshLicenseTable();
                         log("⏰ Hoàn tất kiểm tra định kỳ.");
@@ -707,15 +727,16 @@ public class LicenseSwingGUI extends JFrame {
 
     private void initializeSystem() {
         try {
-            DatabaseSchema.initializeDatabase();
-            log("✅ Database schema đã được khởi tạo thành công.");
-            
-            // Load existing licenses from database
+            // Test connection to backend
+            testConnection();
+
+            // Load existing licenses from API or offline storage
             refreshLicenseTable();
-            
+
             log("Hệ thống quản lý License v2.0 đã sẵn sàng.");
+            log("Chế độ: " + (isOnline ? "🟢 Online" : "🔴 Offline"));
         } catch (Exception e) {
-            log("❌ Lỗi khởi tạo database: " + e.getMessage());
+            log("❌ Lỗi khởi tạo hệ thống: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -842,7 +863,7 @@ public class LicenseSwingGUI extends JFrame {
                     if (LicenseDAO.licenseExists(licenseKeyStr)) {
                         DeviceDAO.removeAllDevices(licenseKeyStr);
                     }
-                    
+
                     for (String device : devices) {
                         DeviceDAO.addDevice(licenseKeyStr, device.trim());
                     }
@@ -956,7 +977,7 @@ public class LicenseSwingGUI extends JFrame {
                     if (LicenseDAO.licenseExists(licenseKeyStr)) {
                         DeviceDAO.removeAllDevices(licenseKeyStr);
                     }
-                    
+
                     for (String device : devices) {
                         if (!device.trim().isEmpty()) {
                             DeviceDAO.addDevice(licenseKeyStr, device.trim());
@@ -1083,13 +1104,13 @@ public class LicenseSwingGUI extends JFrame {
             String newDevice = JOptionPane.showInputDialog(this, "Nhập tên thiết bị mới:", "Thêm Thiết Bị", JOptionPane.PLAIN_MESSAGE);
             if (newDevice != null && !newDevice.trim().isEmpty()) {
                 newDevice = newDevice.trim();
-                
+
                 // Check if device already exists
                 if (DeviceDAO.deviceExists(licenseKey, newDevice)) {
                     JOptionPane.showMessageDialog(this, "Thiết bị '" + newDevice + "' đã tồn tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                
+
                 // Add device to database
                 if (DeviceDAO.addDevice(licenseKey, newDevice)) {
                     deviceListModel.addElement(newDevice);
@@ -1108,13 +1129,13 @@ public class LicenseSwingGUI extends JFrame {
             String newDevice = (String) JOptionPane.showInputDialog(this, "Sửa tên thiết bị:", "Sửa Thiết Bị", JOptionPane.PLAIN_MESSAGE, null, null, currentDevice);
             if (newDevice != null && !newDevice.trim().isEmpty()) {
                 newDevice = newDevice.trim();
-                
+
                 // Check if new device name already exists
                 if (!newDevice.equals(currentDevice) && DeviceDAO.deviceExists(licenseKey, newDevice)) {
                     JOptionPane.showMessageDialog(this, "Thiết bị '" + newDevice + "' đã tồn tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                
+
                 // Update device in database
                 if (DeviceDAO.removeDevice(licenseKey, currentDevice) && DeviceDAO.addDevice(licenseKey, newDevice)) {
                     deviceListModel.set(selectedIndex, newDevice);
@@ -1141,6 +1162,36 @@ public class LicenseSwingGUI extends JFrame {
                 }
             }
         }
+    }
+
+    private void testConnection() {
+        connectionStatusLabel.setText("Đang kiểm tra kết nối...");
+        connectionStatusLabel.setForeground(Color.GRAY);
+
+        // Run connection test in background thread
+        new Thread(() -> {
+            try {
+                isOnline = ApiClient.testConnection();
+
+                SwingUtilities.invokeLater(() -> {
+                    if (isOnline) {
+                        connectionStatusLabel.setText("🟢 Online - Kết nối backend thành công");
+                        connectionStatusLabel.setForeground(Color.GREEN);
+                        log("Kết nối backend thành công - Chế độ Online");
+                    } else {
+                        connectionStatusLabel.setText("🔴 Offline - Lưu dữ liệu vào file JSON");
+                        connectionStatusLabel.setForeground(Color.RED);
+                        log("Không thể kết nối backend - Chế độ Offline (JSON)");
+                    }
+                });
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    connectionStatusLabel.setText("🔴 Offline - Lỗi kết nối");
+                    connectionStatusLabel.setForeground(Color.RED);
+                    log("Lỗi kiểm tra kết nối: " + e.getMessage());
+                });
+            }
+        }).start();
     }
 
     public static void main(String[] args) {

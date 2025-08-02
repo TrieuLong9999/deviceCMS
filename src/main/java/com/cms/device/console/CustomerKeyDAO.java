@@ -6,11 +6,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class CustomerKeyDAO {
@@ -18,27 +15,21 @@ public class CustomerKeyDAO {
     public static Map<String, KeyPair> loadAllCustomerKeys() {
         Map<String, KeyPair> customerKeyPairs = new HashMap<>();
         
-        String sql = "SELECT customer_id, public_key, private_key FROM customer_keys";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                String customerId = rs.getString("customer_id");
-                String publicKeyStr = rs.getString("public_key");
-                String privateKeyStr = rs.getString("private_key");
-                
-                try {
-                    PublicKey publicKey = decodePublicKey(publicKeyStr);
-                    PrivateKey privateKey = decodePrivateKey(privateKeyStr);
-                    KeyPair keyPair = new KeyPair(publicKey, privateKey);
-                    customerKeyPairs.put(customerId, keyPair);
-                } catch (Exception e) {
-                    System.err.println("Error loading key for customer " + customerId + ": " + e.getMessage());
+        try {
+            List<CustomerDto> customers = ApiClient.getAllCustomers();
+            for (CustomerDto customer : customers) {
+                if (customer.getPublicKey() != null && customer.getPrivateKey() != null) {
+                    try {
+                        PublicKey publicKey = decodePublicKey(customer.getPublicKey());
+                        PrivateKey privateKey = decodePrivateKey(customer.getPrivateKey());
+                        KeyPair keyPair = new KeyPair(publicKey, privateKey);
+                        customerKeyPairs.put(customer.getCustomerId(), keyPair);
+                    } catch (Exception e) {
+                        System.err.println("Error loading key for customer " + customer.getCustomerId() + ": " + e.getMessage());
+                    }
                 }
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Error loading customer keys: " + e.getMessage());
             e.printStackTrace();
         }
@@ -47,17 +38,17 @@ public class CustomerKeyDAO {
     }
     
     public static boolean saveCustomerKey(String customerId, KeyPair keyPair) {
-        String sql = "INSERT INTO customer_keys (customer_id, public_key, private_key) VALUES (?, ?, ?)";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try {
+            CustomerDto customer = ApiClient.getCustomer(customerId);
+            if (customer == null) {
+                customer = new CustomerDto(customerId);
+            }
             
-            pstmt.setString(1, customerId);
-            pstmt.setString(2, encodePublicKey(keyPair.getPublic()));
-            pstmt.setString(3, encodePrivateKey(keyPair.getPrivate()));
+            customer.setPublicKey(encodePublicKey(keyPair.getPublic()));
+            customer.setPrivateKey(encodePrivateKey(keyPair.getPrivate()));
             
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+            return ApiClient.createCustomer(customer);
+        } catch (Exception e) {
             System.err.println("Error saving customer key: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -65,14 +56,9 @@ public class CustomerKeyDAO {
     }
     
     public static boolean deleteCustomerKey(String customerId) {
-        String sql = "DELETE FROM customer_keys WHERE customer_id = ?";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, customerId);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+        try {
+            return ApiClient.deleteCustomer(customerId);
+        } catch (Exception e) {
             System.err.println("Error deleting customer key: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -80,23 +66,14 @@ public class CustomerKeyDAO {
     }
     
     public static boolean customerKeyExists(String customerId) {
-        String sql = "SELECT COUNT(*) FROM customer_keys WHERE customer_id = ?";
-        
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, customerId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            }
-        } catch (SQLException e) {
+        try {
+            CustomerDto customer = ApiClient.getCustomer(customerId);
+            return customer != null;
+        } catch (Exception e) {
             System.err.println("Error checking customer key existence: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
-        
-        return false;
     }
     
     private static String encodePublicKey(PublicKey publicKey) {
