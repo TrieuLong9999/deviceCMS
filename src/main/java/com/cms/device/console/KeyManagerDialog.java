@@ -17,13 +17,11 @@ import java.util.Map;
 
 public class KeyManagerDialog extends JDialog {
 
-    private final Map<String, KeyPair> customerKeyPairs;
     private final DefaultTableModel tableModel;
     private final JTable keyTable;
 
-    public KeyManagerDialog(Frame owner, Map<String, KeyPair> customerKeyPairs) {
+    public KeyManagerDialog(Frame owner) {
         super(owner, "Quản lý Offline Key", true);
-        this.customerKeyPairs = customerKeyPairs;
 
         setSize(850, 450);
         setLocationRelativeTo(owner);
@@ -73,6 +71,7 @@ public class KeyManagerDialog extends JDialog {
 
     private void refreshTable() {
         tableModel.setRowCount(0);
+        Map<String, KeyPair> customerKeyPairs = CustomerKeyDAO.loadAllCustomerKeys();
         customerKeyPairs.forEach((customerId, keyPair) -> {
             String pubKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
             tableModel.addRow(new Object[]{
@@ -84,11 +83,11 @@ public class KeyManagerDialog extends JDialog {
     }
 
     private void createNewKey() {
-        String customerId = JOptionPane.showInputDialog(this, "Nhập Customer ID (duy nhất):", "customer-" + (customerKeyPairs.size() + 1));
+        String customerId = JOptionPane.showInputDialog(this, "Nhập Customer ID (duy nhất):", "customer-" + (CustomerKeyDAO.loadAllCustomerKeys().size() + 1));
         if (customerId == null || customerId.trim().isEmpty()) {
             return;
         }
-        if (customerKeyPairs.containsKey(customerId.trim())) {
+        if (CustomerKeyDAO.customerKeyExists(customerId.trim())) {
             JOptionPane.showMessageDialog(this, "Customer ID đã tồn tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -96,9 +95,13 @@ public class KeyManagerDialog extends JDialog {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
             keyGen.initialize(2048);
             KeyPair keyPair = keyGen.generateKeyPair();
-            customerKeyPairs.put(customerId.trim(), keyPair);
-            refreshTable();
-            JOptionPane.showMessageDialog(this, "Tạo key thành công cho: " + customerId.trim(), "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            
+            if (CustomerKeyDAO.saveCustomerKey(customerId.trim(), keyPair)) {
+                refreshTable();
+                JOptionPane.showMessageDialog(this, "Tạo key thành công cho: " + customerId.trim(), "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Lỗi lưu key vào database!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (NoSuchAlgorithmException e) {
             JOptionPane.showMessageDialog(this, "Lỗi tạo key: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
@@ -183,6 +186,7 @@ public class KeyManagerDialog extends JDialog {
 
         private void copyKey(boolean isPublicKey) {
             if (currentCustomerId == null) return;
+            Map<String, KeyPair> customerKeyPairs = CustomerKeyDAO.loadAllCustomerKeys();
             KeyPair keyPair = customerKeyPairs.get(currentCustomerId);
             if (keyPair == null) return;
 
@@ -212,8 +216,12 @@ public class KeyManagerDialog extends JDialog {
                     JOptionPane.WARNING_MESSAGE);
 
             if (confirm == JOptionPane.YES_OPTION) {
-                customerKeyPairs.remove(currentCustomerId);
-                refreshTable();
+                if (CustomerKeyDAO.deleteCustomerKey(currentCustomerId)) {
+                    refreshTable();
+                    JOptionPane.showMessageDialog(KeyManagerDialog.this, "Đã xóa key thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(KeyManagerDialog.this, "Lỗi xóa key từ database!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }
